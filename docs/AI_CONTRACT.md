@@ -43,6 +43,19 @@
    - 不要一次性生成整个项目。
    - 每个 milestone 完成后运行可用测试或静态检查，并更新 README 或对应文档。
 
+9. ImageProvider prompt 构建边界
+   - ImageProvider 可以基于 `story/page/panel` 构建图片 prompt。
+   - ImageProvider 和 prompt builder 不得修改故事、页数、分镜、对白或主线确认状态。
+   - `panel.imagePrompt` 是核心画面描述，但不能作为真实图片 provider 的唯一 prompt 内容长期使用。
+
+10. M11 Panel Prompt Builder 共用约束
+   - M11 必须提供统一 `build_panel_image_prompt(story, page, panel)`。
+   - OpenAI ImageProvider 和豆包 Seedream ImageProvider 必须共用该 prompt builder。
+   - prompt 必须服务于单格漫画画面，不允许生成整页拼图或完整 32 页。
+   - 默认策略是图片模型生成单格画面和中文漫画对白气泡，应用负责拼页、边框、页码和 PDF。
+   - 对白气泡内只允许写 `dialogue.text`，不得写角色名、冒号、编号或额外旁白。
+   - 说话角色必须通过气泡尾巴、指向线和靠近对应角色的位置表达。
+
 ## Codex 自检清单
 
 - 是否先阅读 `docs/AI_CONTRACT.md`？

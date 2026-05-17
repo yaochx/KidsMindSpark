@@ -1,6 +1,6 @@
 # MVP API Spec
 
-所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI 或 DeepSeek StoryProvider；M9 已支持通过后端环境变量切换 OpenAI 或豆包 Seedream ImageProvider。
+所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI 或 DeepSeek StoryProvider；M9 已支持通过后端环境变量切换 OpenAI 或豆包 Seedream ImageProvider。M11 规划使用统一 Panel Prompt Builder 为真实 ImageProvider 构建单格漫画 prompt。
 
 Provider 配置示例：
 
@@ -310,6 +310,17 @@ DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
 - OpenAI ImageProvider 将 base64 图片保存到后端本地 `backend/data/images/` 并写入 `ComicImage.uri`。
 - 豆包 Seedream ImageProvider 支持 `b64_json` 或 `url` 响应；`b64_json` 会保存到后端本地，`url` 会直接写入 `ComicImage.uri`。
 - 生成失败时应记录失败状态，并允许 mock fallback。
+
+### M11 Panel Prompt Builder 行为
+
+- 真实 ImageProvider 应使用统一 `build_panel_image_prompt(story, page, panel)` 构建 prompt。
+- `panel.imagePrompt` 仍是核心画面描述，但不再是唯一 prompt 内容。
+- prompt 必须融合角色设定、页码和分镜号、场景、镜头、动作、中文对白气泡内容、儿童安全约束和单格漫画构图要求。
+- 有对白的 panel 应要求图片模型生成清晰中文漫画对白气泡。
+- 气泡内只允许写 `dialogue.text`，不得写角色名、冒号、编号或额外旁白。
+- 说话角色必须通过气泡尾巴、指向线和靠近对应角色的位置表达；多个气泡应按阅读顺序排列，不能遮挡角色脸部和关键动作。
+- 无对白的 panel 应要求图片模型不要生成文字或对白气泡。
+- prompt builder 不得修改 story、page、panel、对白、页数或主线确认状态。
 
 ## GET /api/export/pdf
 

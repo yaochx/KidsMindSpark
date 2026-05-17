@@ -2,7 +2,7 @@
 
 儿童中式/日式彩色漫画故事生成 MVP。
 
-当前进度：M9 真实 ImageProvider 接入。
+当前进度：M10 之后规划 M11 Panel Prompt Builder。
 
 ## 开发约束
 
@@ -11,7 +11,7 @@
 1. `docs/AI_CONTRACT.md`
 2. `docs/MILESTONE.md`
 
-当前 M9 包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI / DeepSeek StoryProvider，以及可选 OpenAI / 豆包 Seedream ImageProvider。
+当前已包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI / DeepSeek StoryProvider，以及可选 OpenAI / 豆包 Seedream ImageProvider。下一阶段 M11 将引入统一 Panel Prompt Builder。
 
 ## 前端启动
 
@@ -195,6 +195,7 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 - M8 真实 StoryProvider 接入：已完成。
 - M9 真实 ImageProvider 接入：已完成。
 - M10 真实工作流稳定化：规划中。
+- M11 Panel Prompt Builder：规划中。
 
 ## 真实 API 接入路线
 
@@ -206,6 +207,9 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 2. M8: 接入一个真实文本 provider，用于故事、主线、32 页脚本和 `imagePrompt`。
 3. M9: 接入一个真实图像 provider，优先支持单 panel 或单页生成。
 4. M10: 补齐 fallback、缓存、错误处理、调用次数限制和测试。
+5. M11: 新增 `build_panel_image_prompt(story, page, panel)`，不再让真实 ImageProvider 直接原样消费 `panel.imagePrompt`，而是用结构化 `story/page/panel` 构建完整单格漫画 prompt。
+
+M11 的 prompt builder 会融合角色设定、页码和分镜号、场景、镜头、动作、`panel.imagePrompt`、中文对白气泡内容、儿童安全约束和单格漫画构图要求。默认策略是让豆包 Seedream 等图片模型生成单格画面和中文漫画对白气泡；应用继续负责拼页、边框、页码和 PDF。对白气泡内只允许写 `dialogue.text`，不得写角色名、冒号或编号；说话角色必须通过气泡尾巴、指向线和靠近对应角色的位置表达。
 
 本地 provider 配置示例：
 

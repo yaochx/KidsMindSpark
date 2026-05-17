@@ -1,4 +1,4 @@
-# 开发里程碑 M0-M10
+# 开发里程碑 M0-M11
 
 每次开发只实现一个 milestone。除非当前 milestone 明确要求，不得提前实现后续功能。
 
@@ -533,3 +533,51 @@ DeepSeek 可用于文本结构生成，但不能用于图片生成。
 - 不允许做复杂账号、班级权限或公开部署。
 - 不允许记录 API key、cookie、个人 session。
 - 不允许为了真实效果放松 32 页、1-4 分镜、短对白、主线确认等硬约束。
+
+## M11 Panel Prompt Builder
+
+### 目标
+
+新增统一 `build_panel_image_prompt(story, page, panel)`，让 OpenAI ImageProvider 和豆包 Seedream ImageProvider 共用同一套单格漫画图片 prompt 构建逻辑。M11 不再让真实 ImageProvider 直接原样消费 `panel.imagePrompt`，而是基于结构化 `story/page/panel` 生成完整、可控、儿童适龄的单格漫画视觉指令。
+
+### 交付物
+
+- 统一 Panel Prompt Builder 设计和实现。
+- OpenAI ImageProvider 与豆包 Seedream ImageProvider 共用 prompt builder。
+- prompt 融合角色设定、页码和分镜号、场景、镜头、动作、`panel.imagePrompt`、中文对白气泡内容、儿童安全约束和单格漫画构图要求。
+- 有对白的 panel 要求图片模型生成清晰中文漫画对白气泡，气泡内只写 `dialogue.text`，不得写角色名、冒号或编号。
+- prompt 必须要求用气泡尾巴、指向线和靠近对应角色的位置表达说话角色。
+- 无对白的 panel 要求图片模型不要生成文字或对白气泡。
+- README、API_SPEC 和架构文档同步说明 M11 行为。
+
+### 文件清单
+
+- `backend/app/providers/image/`
+- `backend/tests/`
+- `README.md`
+- `docs/API_SPEC.md`
+- `docs/ARCHITECTURE.md`
+- `docs/AI_CONTRACT.md`
+
+### 验收标准
+
+- 存在统一 `build_panel_image_prompt(story, page, panel)` 接口。
+- OpenAI ImageProvider 和豆包 Seedream ImageProvider 不再各自拼接 prompt。
+- `panel.imagePrompt` 仍是核心画面描述，但不再是唯一 prompt 内容。
+- prompt 必须包含页码、分镜号和单格漫画约束，明确不生成整页拼图。
+- prompt 必须包含儿童安全约束，不允许真实武器、血腥恐怖或危险行为。
+- 有对白时，prompt 必须包含中文对白气泡生成要求，且气泡内只允许包含 `dialogue.text`。
+- prompt 必须禁止在气泡内写角色名、冒号、编号或额外旁白。
+- prompt 必须要求气泡尾巴或指向线指向对应角色，多个气泡按阅读顺序排列且不遮挡角色脸部和关键动作。
+- 无对白时，prompt 必须禁止文字和对白气泡。
+- 图像 provider 不得修改故事、页数、分镜、对白或主线确认状态。
+
+### 不允许做的事情
+
+- 不允许改变固定 32 页结构。
+- 不允许改变每页 1-4 个分镜约束。
+- 不允许跳过图形化主线确认。
+- 不允许让图片模型生成整页拼图或完整 32 页。
+- 不允许真实图像生成默认一次性跑完整 32 页全部分镜。
+- 不允许在 prompt builder 中改写对白、扩写剧情或新增角色。
+- 不允许把 prompt builder 做成某个单一 provider 的私有逻辑。

@@ -6,7 +6,7 @@
 - UI: shadcn/ui，可选 React Flow
 - backend: Flask + Python 3.11
 - data: 本地 JSON 文件
-- AI: mock provider；M7 后拆分为 StoryProvider 与 ImageProvider
+- AI: mock provider；M7 后拆分为 StoryProvider 与 ImageProvider；M11 规划加入 Panel Prompt Builder
 - PDF: 前期可用浏览器打印或后端 PDF 库
 
 ## 架构原则
@@ -38,7 +38,8 @@ flowchart LR
         API --> StoryService[Story Service]
         API --> ComicService[Comic Image Service]
         StoryService --> StoryProvider[StoryProvider<br/>mock / openai / deepseek / glm / minimax]
-        ComicService --> ImageProvider[ImageProvider<br/>mock / openai_image / minimax_image / kling / jimeng / wanxiang]
+        ComicService --> PromptBuilder[Panel Prompt Builder<br/>build_panel_image_prompt]
+        PromptBuilder --> ImageProvider[ImageProvider<br/>mock / openai_image / doubao_seedream / minimax_image / kling / jimeng / wanxiang]
         StoryService --> JsonStore[Local JSON Store]
         ComicService --> JsonStore
         StoryService --> PdfService[PDF Export Service]
@@ -47,7 +48,7 @@ flowchart LR
     StoryProvider --> Outline[核心设定]
     StoryProvider --> TimelineData[主线节点]
     StoryProvider --> ScriptData[32 页分镜与 imagePrompt]
-    ImageProvider --> ComicImages[漫画图像或 mock 图像]
+    ImageProvider --> ComicImages[单格漫画图像或 mock 图像]
 
     PdfService --> PDF[A4 PDF Preview<br/>Future: 32 开打印]
 ```
@@ -89,7 +90,8 @@ docs/
 - Timeline Editor: 用户确认或编辑主线。
 - Script Generator: 生成固定 32 页漫画脚本。
 - StoryProvider: 生成核心设定、主线、32 页分镜和每格 `imagePrompt`。
-- ImageProvider: 根据分镜 `imagePrompt` 生成漫画图像或 mock 图像占位数据。
+- Panel Prompt Builder: 基于 `story/page/panel` 构建单格漫画图片 prompt，融合角色设定、分镜结构、中文对白气泡和儿童安全约束；对白气泡内只写对白文本，角色归属由气泡尾巴或指向线表达。
+- ImageProvider: 根据 Panel Prompt Builder 输出的 prompt 生成漫画图像或 mock 图像占位数据。
 - Comic Preview: 以漫画页方式展示图片、对白、旁白和页码。
 - PDF Export: 导出 A4 预览 PDF，后续升级 32 开打印。
 
@@ -111,6 +113,7 @@ IMAGE_PROVIDER=mock
 - M8: 只接入一个真实 StoryProvider，用于文本结构生成和 `imagePrompt`。
 - M9: 只接入一个真实 ImageProvider，优先单 panel 或单页生成。
 - M10: 稳定真实工作流，补齐 fallback、缓存、错误处理、调用次数限制和测试。
+- M11: 新增统一 Panel Prompt Builder，真实 ImageProvider 不再直接原样消费 `panel.imagePrompt`。
 
 真实 API key 只允许通过后端环境变量读取：
 
