@@ -11,7 +11,7 @@
 1. `docs/AI_CONTRACT.md`
 2. `docs/MILESTONE.md`
 
-当前 M9 包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI StoryProvider，以及可选 OpenAI ImageProvider。
+当前 M9 包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI / DeepSeek StoryProvider，以及可选 OpenAI ImageProvider。
 
 ## 前端启动
 
@@ -48,6 +48,7 @@ export IMAGE_PROVIDER=mock
 - `ImageProvider` 负责根据 `imagePrompt` 生成或返回图片记录。
 - `STORY_PROVIDER=mock` 时仍使用本地 mock，不调用真实模型。
 - `STORY_PROVIDER=openai` 时后端通过 OpenAI Responses API 生成故事核心设定、主线和 32 页分镜。
+- `STORY_PROVIDER=deepseek` 时后端通过 DeepSeek Chat Completions API 生成故事核心设定、主线和 32 页分镜。
 - `IMAGE_PROVIDER=mock` 当前仍使用 mock 图片记录。
 - `IMAGE_PROVIDER=openai_image` 时后端通过 OpenAI Images API 生成单页或单格漫画图像。
 - 真实图像生成必须指定 `panelId` 或 `pageNumber`，不允许默认一次性生成 32 页全部分镜。
@@ -62,6 +63,17 @@ export OPENAI_STORY_MODEL=gpt-4o-mini
 ```
 
 `OPENAI_STORY_MODEL` 可不设置，默认使用 `gpt-4o-mini`。没有 API key 时请保持 `STORY_PROVIDER=mock`。
+
+DeepSeek StoryProvider 本地配置示例：
+
+```bash
+export STORY_PROVIDER=deepseek
+export DEEPSEEK_API_KEY=<your_api_key>
+export DEEPSEEK_STORY_MODEL=deepseek-v4-flash
+export IMAGE_PROVIDER=mock
+```
+
+`DEEPSEEK_STORY_MODEL` 可不设置，默认使用 `deepseek-v4-flash`。DeepSeek 仅作为文本 StoryProvider 使用，不作为 ImageProvider。
 
 OpenAI ImageProvider 本地配置示例：
 
@@ -135,7 +147,7 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 
 ## 真实 API 接入路线
 
-当前应用默认使用 mock provider，不调用真实 GPT、DeepSeek、GLM、MiniMax 或图像生成 API。切换到 `STORY_PROVIDER=openai` 后，故事文本生成会调用 OpenAI API；切换到 `IMAGE_PROVIDER=openai_image` 后，单页或单格图像生成会调用 OpenAI Images API。
+当前应用默认使用 mock provider，不调用真实 GPT、DeepSeek、GLM、MiniMax 或图像生成 API。切换到 `STORY_PROVIDER=openai` 后，故事文本生成会调用 OpenAI API；切换到 `STORY_PROVIDER=deepseek` 后，故事文本生成会调用 DeepSeek API；切换到 `IMAGE_PROVIDER=openai_image` 后，单页或单格图像生成会调用 OpenAI Images API。
 
 后续真实 API 接入按阶段推进：
 
@@ -157,6 +169,15 @@ OpenAI 文本 provider 配置示例：
 export STORY_PROVIDER=openai
 export OPENAI_API_KEY=<your_api_key>
 export OPENAI_STORY_MODEL=gpt-4o-mini
+export IMAGE_PROVIDER=mock
+```
+
+DeepSeek 文本 provider 配置示例：
+
+```bash
+export STORY_PROVIDER=deepseek
+export DEEPSEEK_API_KEY=<your_api_key>
+export DEEPSEEK_STORY_MODEL=deepseek-v4-flash
 export IMAGE_PROVIDER=mock
 ```
 
