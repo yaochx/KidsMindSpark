@@ -9,6 +9,7 @@ from base64 import b64encode
 from pathlib import Path
 from unittest.mock import patch
 
+from backend.app.config.env_loader import load_dotenv
 from backend.app.providers.errors import ProviderResponseError
 from backend.app.providers.story.deepseek_story_provider import DeepSeekStoryProvider
 from backend.app.providers.story.openai_story_provider import OpenAIStoryProvider
@@ -19,6 +20,8 @@ class MvpFlowTest(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp_dir.cleanup)
         self._patch_data_dirs(Path(self.temp_dir.name))
+        os.environ["STORY_PROVIDER"] = "mock"
+        os.environ["IMAGE_PROVIDER"] = "mock"
 
         from backend.app import create_app
 
@@ -85,6 +88,32 @@ class MvpFlowTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["error"]["code"], "PROVIDER_CONFIG_ERROR")
+
+    def test_dotenv_loader_reads_values_without_overriding_exports(self) -> None:
+        env_path = Path(self.temp_dir.name) / ".env"
+        env_path.write_text(
+            "\n".join(
+                [
+                    "STORY_PROVIDER=deepseek",
+                    "DEEPSEEK_API_KEY=from-env-file",
+                    "IMAGE_PROVIDER=mock",
+                    "QUOTED_VALUE=\"hello world\"",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        with patch.dict(
+            os.environ,
+            {"DEEPSEEK_API_KEY": "from-shell-export"},
+            clear=True,
+        ):
+            load_dotenv(env_path)
+
+            self.assertEqual(os.environ["STORY_PROVIDER"], "deepseek")
+            self.assertEqual(os.environ["DEEPSEEK_API_KEY"], "from-shell-export")
+            self.assertEqual(os.environ["IMAGE_PROVIDER"], "mock")
+            self.assertEqual(os.environ["QUOTED_VALUE"], "hello world")
 
     def test_openai_story_provider_requires_api_key(self) -> None:
         with patch.dict(os.environ, {"STORY_PROVIDER": "openai"}, clear=True):

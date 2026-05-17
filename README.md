@@ -33,6 +33,19 @@ http://localhost:3000
 .venv/bin/flask --app backend.app run --debug
 ```
 
+如果本机 `5000` 被系统服务占用，可将后端启动到 `5001`：
+
+```bash
+.venv/bin/flask --app backend.app run --debug --host 127.0.0.1 --port 5001
+```
+
+前端代理到 `5001`：
+
+```bash
+cd frontend
+BACKEND_URL=http://127.0.0.1:5001 npm run dev
+```
+
 ## Provider 配置
 
 默认使用 mock provider，不调用真实模型：
@@ -41,6 +54,23 @@ http://localhost:3000
 export STORY_PROVIDER=mock
 export IMAGE_PROVIDER=mock
 ```
+
+也可以复制 `.env.example` 为根目录 `.env`，由后端启动时自动读取：
+
+```bash
+cp .env.example .env
+```
+
+`.env` 示例：
+
+```text
+STORY_PROVIDER=deepseek
+DEEPSEEK_API_KEY=<your_api_key>
+DEEPSEEK_STORY_MODEL=deepseek-v4-flash
+IMAGE_PROVIDER=mock
+```
+
+说明：shell 中已 `export` 的同名环境变量优先级更高，`.env` 不会覆盖它们。`.env` 已加入 `.gitignore`，不要提交真实 key。
 
 说明：
 

@@ -4,9 +4,11 @@ from .api.comic import comic_bp
 from .api.export import export_bp
 from .api.health import health_bp
 from .api.story import story_bp
+from .config import load_dotenv
 
 
 def create_app() -> Flask:
+    load_dotenv()
     app = Flask(__name__)
     app.register_blueprint(comic_bp)
     app.register_blueprint(export_bp)

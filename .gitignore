@@ -1,4 +1,7 @@
 .venv/
+.env
+.env.local
+frontend/.env.local
 __pycache__/
 *.pyc
 .DS_Store
@@ -9,3 +12,4 @@ build/
 .pytest_cache/
 backend/data/stories/
 backend/data/exports/
+backend/data/images/
