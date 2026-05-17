@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from ..providers.config import ProviderConfigError, get_story_provider
+from ..providers.config import get_story_provider
+from ..providers.errors import ProviderError
 from ..storage.json_store import save_story
 
 SUPPORTED_AGES = {"小学 1-4 年级", "小学 5-6 年级"}
@@ -28,8 +29,9 @@ def create_story_outline(payload: dict[str, Any]) -> dict[str, Any]:
     story_id = f"story_{uuid4().hex[:12]}"
     try:
         outline = get_story_provider().create_outline(normalized, story_id)
-    except ProviderConfigError as error:
+    except ProviderError as error:
         raise StoryValidationError(error.code, error.message, error.details) from error
+    outline = _validate_outline_result(outline, normalized["title"])
     now = datetime.now(timezone.utc).isoformat()
 
     story = {
@@ -80,4 +82,28 @@ def _validate_outline_payload(payload: dict[str, Any]) -> dict[str, str]:
         "concept": concept,
         "targetAge": target_age,
         "visualStyle": visual_style,
+    }
+
+
+def _validate_outline_result(outline: dict[str, Any], fallback_title: str) -> dict[str, Any]:
+    safe_concept = str(outline.get("safeConcept", "")).strip()
+    if not safe_concept:
+        raise StoryValidationError(
+            "PROVIDER_RESPONSE_INVALID",
+            "StoryProvider 返回缺少安全故事概念。",
+        )
+
+    characters = outline.get("characters", [])
+    if not isinstance(characters, list):
+        raise StoryValidationError(
+            "PROVIDER_RESPONSE_INVALID",
+            "StoryProvider 返回的 characters 必须是数组。",
+        )
+
+    return {
+        "storyId": str(outline.get("storyId", "")).strip(),
+        "title": str(outline.get("title", "")).strip() or fallback_title,
+        "safeConcept": safe_concept,
+        "characters": characters,
+        "status": "outlined",
     }

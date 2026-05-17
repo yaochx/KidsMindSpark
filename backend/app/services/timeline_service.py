@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from ..providers.config import ProviderConfigError, get_story_provider
+from ..providers.config import get_story_provider
+from ..providers.errors import ProviderError
 from ..storage.json_store import load_story, save_story
 
 REQUIRED_NODE_TYPES = [
@@ -40,8 +41,9 @@ def generate_story_timeline(payload: dict[str, Any]) -> dict[str, Any]:
 
     try:
         timeline = get_story_provider().create_timeline(story)
-    except ProviderConfigError as error:
+    except ProviderError as error:
         raise TimelineError(error.code, error.message, error.details) from error
+    timeline = _validate_timeline(timeline)
     story["timeline"] = timeline
     story["updatedAt"] = datetime.now(timezone.utc).isoformat()
     if story.get("status") != "timeline_confirmed":

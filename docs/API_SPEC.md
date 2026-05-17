@@ -1,11 +1,20 @@
 # MVP API Spec
 
-所有 API 在 M0-M7 阶段默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 以后可通过后端环境变量切换真实 StoryProvider；M9 以后可通过后端环境变量切换真实 ImageProvider。
+所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI StoryProvider；M9 以后可通过后端环境变量切换真实 ImageProvider。
 
 Provider 配置示例：
 
 ```text
 STORY_PROVIDER=mock
+IMAGE_PROVIDER=mock
+```
+
+OpenAI StoryProvider 配置示例：
+
+```text
+STORY_PROVIDER=openai
+OPENAI_API_KEY=<your_api_key>
+OPENAI_STORY_MODEL=gpt-4o-mini
 IMAGE_PROVIDER=mock
 ```
 

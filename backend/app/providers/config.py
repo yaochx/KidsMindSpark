@@ -2,25 +2,20 @@ from __future__ import annotations
 
 import os
 
+from .errors import ProviderConfigError
 from .image import ImageProvider, MockImageProvider
-from .story import MockStoryProvider, StoryProvider
+from .story import MockStoryProvider, OpenAIStoryProvider, StoryProvider
 
 DEFAULT_STORY_PROVIDER = "mock"
 DEFAULT_IMAGE_PROVIDER = "mock"
-
-
-class ProviderConfigError(ValueError):
-    def __init__(self, code: str, message: str, details: dict[str, str] | None = None):
-        super().__init__(message)
-        self.code = code
-        self.message = message
-        self.details = details or {}
 
 
 def get_story_provider() -> StoryProvider:
     provider_name = os.environ.get("STORY_PROVIDER", DEFAULT_STORY_PROVIDER).strip()
     if provider_name == "mock":
         return MockStoryProvider()
+    if provider_name == "openai":
+        return OpenAIStoryProvider()
     raise ProviderConfigError(
         "PROVIDER_CONFIG_ERROR",
         "未知的 StoryProvider 配置。",
