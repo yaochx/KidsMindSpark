@@ -9,6 +9,7 @@ from typing import Any
 from ...storage.image_store import save_base64_png
 from ..errors import ProviderCallError, ProviderConfigError, ProviderResponseError
 from .base import ImageGenerationTarget
+from .prompt_builder import build_panel_image_prompt, build_panel_prompt_hash
 
 OPENAI_IMAGES_URL = "https://api.openai.com/v1/images/generations"
 DEFAULT_OPENAI_IMAGE_MODEL = "gpt-image-1"
@@ -43,7 +44,8 @@ class OpenAIImageProvider:
         images: list[dict[str, Any]] = []
         for page, panel in panel_items:
             image_id = f"img_{panel['id']}"
-            prompt = _panel_prompt(story, page, panel)
+            prompt = build_panel_image_prompt(story, page, panel)
+            prompt_hash = build_panel_prompt_hash(prompt)
             try:
                 image_path = self._generate_png(image_id, prompt)
                 status = "generated"
@@ -61,6 +63,7 @@ class OpenAIImageProvider:
                 "status": status,
                 "uri": image_path,
                 "prompt": prompt,
+                "promptHash": prompt_hash,
                 "width": 1024,
                 "height": 1024,
                 "style": story.get("visualStyle", "mixed_east_asian_color_comic"),
@@ -131,21 +134,6 @@ def _select_panels(
             "找不到要生成图片的分镜。",
         )
     return selected
-
-
-def _panel_prompt(story: dict[str, Any], page: dict[str, Any], panel: dict[str, Any]) -> str:
-    image_prompt = str(panel.get("imagePrompt", "")).strip()
-    if not image_prompt:
-        raise ProviderResponseError(
-            "IMAGE_PROMPT_REQUIRED",
-            "分镜缺少 imagePrompt，无法生成图片。",
-            {"panelId": str(panel.get("id", ""))},
-        )
-    return (
-        f"{image_prompt}. Color Chinese and Japanese children's comic style, "
-        f"page {page.get('pageNumber')}, panel {panel.get('panelNumber')}, "
-        f"story title: {story.get('title', '')}."
-    )
 
 
 def _extract_b64_image(response_data: dict[str, Any]) -> str:

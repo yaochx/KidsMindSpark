@@ -2,7 +2,7 @@
 
 儿童中式/日式彩色漫画故事生成 MVP。
 
-当前进度：M10 之后规划 M11 Panel Prompt Builder。
+当前进度：M11 Panel Prompt Builder 接入。
 
 ## 开发约束
 
@@ -11,7 +11,7 @@
 1. `docs/AI_CONTRACT.md`
 2. `docs/MILESTONE.md`
 
-当前已包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI / DeepSeek StoryProvider，以及可选 OpenAI / 豆包 Seedream ImageProvider。下一阶段 M11 将引入统一 Panel Prompt Builder。
+当前已包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI / DeepSeek StoryProvider、可选 OpenAI / 豆包 Seedream ImageProvider，以及统一 Panel Prompt Builder。
 
 ## 前端启动
 
@@ -195,7 +195,7 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 - M8 真实 StoryProvider 接入：已完成。
 - M9 真实 ImageProvider 接入：已完成。
 - M10 真实工作流稳定化：规划中。
-- M11 Panel Prompt Builder：规划中。
+- M11 Panel Prompt Builder：已完成。
 - M12 Image Asset Cache 与真实图片预览/PDF 嵌图：规划中。
 - M13 批量生成队列、一键自动化与候选图挑选：规划中。
 - M14 故事优先页数与本地项目/预算模型：规划中。

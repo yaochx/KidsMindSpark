@@ -5,6 +5,7 @@ export type ComicImage = {
   status: "pending" | "generated" | "failed";
   uri: string;
   prompt: string;
+  promptHash?: string;
   width: number;
   height: number;
   style: string;

@@ -93,6 +93,7 @@ type ComicImage = {
   status: "pending" | "generated" | "failed";
   uri: string;
   prompt: string;
+  promptHash?: string;
   width: number;
   height: number;
   style: string;
@@ -355,6 +356,7 @@ type ExportJob = {
       "status": "generated",
       "uri": "/mock-images/color-comic-placeholder-001.svg",
       "prompt": "color east asian children's comic, three kittens finding a glowing leaf map near a forest path",
+      "promptHash": "optional-sha256-prompt-hash-for-real-image-provider",
       "width": 1024,
       "height": 768,
       "style": "mixed_east_asian_color_comic"
@@ -366,6 +368,7 @@ type ExportJob = {
       "status": "generated",
       "uri": "/mock-images/color-comic-placeholder-032.svg",
       "prompt": "children's color manga ending, kitten siblings sharing a sketchbook with forest friends in a paradise village",
+      "promptHash": "optional-sha256-prompt-hash-for-real-image-provider",
       "width": 1024,
       "height": 768,
       "style": "mixed_east_asian_color_comic"
