@@ -95,7 +95,7 @@ docs/
 - Image Asset Cache: 图片资产层，保存真实生图历史产物、promptHash、候选图和 `selectedImageId`。
 - Comic Preview: 以漫画页方式展示图片、对白、旁白和页码；M12 已支持把选中的真实图片渲染到对应分镜框。
 - PDF Export: 导出 A4 预览 PDF，M12 已支持嵌入选中的真实分镜图片，后续升级 32 开打印。
-- Batch Generation Queue: M13 规划的一键自动化任务层，负责缓存命中、预算限制、状态追踪、失败重试、候选图挑选和单格重生成。
+- Batch Generation Queue: 一键自动化任务层，负责缓存命中、预算限制、状态追踪、失败重试、候选图挑选和单格重生成。
 - Local Project/Budget Model: M14 规划的本地项目层，用 `workspaceId=local_default`、`projectId` 管理故事、缓存和预算，不引入正式账号系统。
 
 ## M7 Provider 配置原则

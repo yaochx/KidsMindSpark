@@ -480,6 +480,88 @@ class MvpFlowTest(unittest.TestCase):
         self.assertFalse(first_image["fromCache"])
         self.assertTrue(second_image["fromCache"])
 
+    def test_generation_job_respects_image_budget(self) -> None:
+        story_id = self._create_ready_script()
+        api_response = {"data": [{"b64_json": ONE_PIXEL_RGB_PNG}]}
+        call_count = 0
+
+        def fake_urlopen(request, timeout):
+            nonlocal call_count
+            call_count += 1
+            return _FakeOpenAIResponse(api_response)
+
+        with patch.dict(
+            os.environ,
+            {"IMAGE_PROVIDER": "openai_image", "OPENAI_API_KEY": "test-key"},
+            clear=True,
+        ):
+            with patch(
+                "backend.app.providers.image.openai_image_provider.urllib.request.urlopen",
+                side_effect=fake_urlopen,
+            ):
+                response = self.client.post(
+                    "/api/comic/generation-jobs",
+                    json={"storyId": story_id, "maxImages": 2},
+                )
+
+        self.assertEqual(response.status_code, 201)
+        data = response.get_json()
+        self.assertEqual(data["job"]["budget"]["maxImages"], 2)
+        self.assertEqual(len(data["job"]["items"]), 2)
+        self.assertEqual(len(data["images"]), 2)
+        self.assertEqual(call_count, 2)
+
+    def test_select_panel_image_uses_existing_candidate(self) -> None:
+        story_id = self._create_ready_script()
+        api_response = {"data": [{"b64_json": ONE_PIXEL_RGB_PNG}]}
+
+        with patch.dict(
+            os.environ,
+            {"IMAGE_PROVIDER": "openai_image", "OPENAI_API_KEY": "test-key"},
+            clear=True,
+        ):
+            with patch(
+                "backend.app.providers.image.openai_image_provider.urllib.request.urlopen",
+                return_value=_FakeOpenAIResponse(api_response),
+            ):
+                first_response = self.client.post(
+                    "/api/comic/mock-images",
+                    json={
+                        "storyId": story_id,
+                        "panelId": "panel_001_01",
+                        "forceNew": True,
+                    },
+                )
+                second_response = self.client.post(
+                    "/api/comic/mock-images",
+                    json={
+                        "storyId": story_id,
+                        "panelId": "panel_001_01",
+                        "forceNew": True,
+                    },
+                )
+
+        first_image = first_response.get_json()["images"][0]
+        second_image = second_response.get_json()["images"][0]
+        self.assertNotEqual(first_image["id"], second_image["id"])
+
+        response = self.client.put(
+            "/api/comic/images/select",
+            json={
+                "storyId": story_id,
+                "panelId": "panel_001_01",
+                "imageId": first_image["id"],
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["image"]["id"], first_image["id"])
+        selected = [
+            image for image in data["images"] if image["panelId"] == "panel_001_01"
+        ][0]
+        self.assertEqual(selected["id"], first_image["id"])
+
     def test_generated_image_endpoint_returns_local_png(self) -> None:
         story_id = self._create_ready_script()
         api_response = {"data": [{"b64_json": ONE_PIXEL_RGB_PNG}]}
