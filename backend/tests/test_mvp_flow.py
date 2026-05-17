@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import importlib
+import json
 import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+
+from backend.app.providers.errors import ProviderResponseError
+from backend.app.providers.story.openai_story_provider import OpenAIStoryProvider
 
 
 class MvpFlowTest(unittest.TestCase):
@@ -80,6 +84,89 @@ class MvpFlowTest(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["error"]["code"], "PROVIDER_CONFIG_ERROR")
 
+    def test_openai_story_provider_requires_api_key(self) -> None:
+        with patch.dict(os.environ, {"STORY_PROVIDER": "openai"}, clear=True):
+            response = self.client.post(
+                "/api/story/outline",
+                json={
+                    "title": "三只小猫的森林桃源",
+                    "concept": "三只小猫带着木头探险杖去森林冒险。",
+                    "targetAge": "小学 1-4 年级",
+                    "visualStyle": "mixed_east_asian_color_comic",
+                },
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"]["code"], "PROVIDER_CONFIG_ERROR")
+
+    def test_openai_story_provider_parses_outline_response(self) -> None:
+        api_response = {
+            "output": [
+                {
+                    "type": "message",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": json.dumps(
+                                {
+                                    "title": "三只小猫的森林桃源",
+                                    "safeConcept": "三只小猫带着木头探险杖去森林冒险。",
+                                    "characters": [
+                                        {
+                                            "id": "cat_1",
+                                            "name": "老大",
+                                            "role": "主角",
+                                            "description": "稳重的小猫。",
+                                            "visualPrompt": "orange kitten leader",
+                                        }
+                                    ],
+                                },
+                                ensure_ascii=False,
+                            ),
+                        }
+                    ],
+                }
+            ]
+        }
+
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "backend.app.providers.story.openai_story_provider.urllib.request.urlopen",
+                return_value=_FakeOpenAIResponse(api_response),
+            ):
+                outline = OpenAIStoryProvider().create_outline(
+                    {
+                        "title": "三只小猫的森林桃源",
+                        "concept": "三只小猫拿着猎枪去森林冒险。",
+                        "targetAge": "小学 1-4 年级",
+                        "visualStyle": "mixed_east_asian_color_comic",
+                    },
+                    "story_test",
+                )
+
+        self.assertEqual(outline["storyId"], "story_test")
+        self.assertIn("木头探险杖", outline["safeConcept"])
+        self.assertEqual(outline["status"], "outlined")
+
+    def test_openai_story_provider_rejects_invalid_json_text(self) -> None:
+        api_response = {"output_text": "不是 JSON"}
+
+        with patch.dict(os.environ, {"OPENAI_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "backend.app.providers.story.openai_story_provider.urllib.request.urlopen",
+                return_value=_FakeOpenAIResponse(api_response),
+            ):
+                with self.assertRaises(ProviderResponseError):
+                    OpenAIStoryProvider().create_outline(
+                        {
+                            "title": "三只小猫的森林桃源",
+                            "concept": "三只小猫带着木头探险杖去森林冒险。",
+                            "targetAge": "小学 1-4 年级",
+                            "visualStyle": "mixed_east_asian_color_comic",
+                        },
+                        "story_test",
+                    )
+
     def test_unknown_image_provider_returns_clear_error(self) -> None:
         story_id = self._create_outline()
         timeline = self._create_timeline(story_id)
@@ -150,6 +237,20 @@ class MvpFlowTest(unittest.TestCase):
                 module.STORIES_DIR = data_dir / "stories"
             if hasattr(module, "EXPORTS_DIR"):
                 module.EXPORTS_DIR = data_dir / "exports"
+
+
+class _FakeOpenAIResponse:
+    def __init__(self, payload: dict) -> None:
+        self.payload = payload
+
+    def __enter__(self) -> "_FakeOpenAIResponse":
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        return None
+
+    def read(self) -> bytes:
+        return json.dumps(self.payload).encode("utf-8")
 
 
 if __name__ == "__main__":

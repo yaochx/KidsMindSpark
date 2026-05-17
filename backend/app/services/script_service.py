@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from ..providers.config import ProviderConfigError, get_story_provider
+from ..providers.config import get_story_provider
+from ..providers.errors import ProviderError
 from ..storage.json_store import load_story, save_story
 
 
@@ -35,7 +36,7 @@ def generate_story_script(payload: dict[str, Any]) -> dict[str, Any]:
 
     try:
         pages = get_story_provider().create_script_pages(story)
-    except ProviderConfigError as error:
+    except ProviderError as error:
         raise ScriptError(error.code, error.message, error.details) from error
     _validate_script_pages(pages)
 

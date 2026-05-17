@@ -3,7 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from ..providers.config import ProviderConfigError, get_image_provider
+from ..providers.config import get_image_provider
+from ..providers.errors import ProviderError
 from ..storage.json_store import load_story, save_story
 
 
@@ -31,7 +32,7 @@ def generate_mock_images(payload: dict[str, Any]) -> dict[str, Any]:
 
     try:
         images = get_image_provider().create_images(story)
-    except ProviderConfigError as error:
+    except ProviderError as error:
         raise MockImageError(error.code, error.message, error.details) from error
 
     story["pages"] = pages
