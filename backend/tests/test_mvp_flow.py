@@ -343,6 +343,107 @@ class MvpFlowTest(unittest.TestCase):
         self.assertEqual(image["panelId"], "panel_001_01")
         self.assertTrue(Path(image["uri"]).exists())
 
+    def test_doubao_seedream_image_provider_requires_api_key(self) -> None:
+        story_id = self._create_ready_script()
+
+        with patch.dict(
+            os.environ,
+            {"IMAGE_PROVIDER": "doubao_seedream"},
+            clear=True,
+        ):
+            response = self.client.post(
+                "/api/comic/mock-images",
+                json={"storyId": story_id, "panelId": "panel_001_01"},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"]["code"], "PROVIDER_CONFIG_ERROR")
+
+    def test_doubao_seedream_image_provider_requires_target(self) -> None:
+        story_id = self._create_ready_script()
+
+        with patch.dict(
+            os.environ,
+            {
+                "IMAGE_PROVIDER": "doubao_seedream",
+                "DOUBAO_SEEDREAM_API_KEY": "test-key",
+            },
+            clear=True,
+        ):
+            response = self.client.post("/api/comic/mock-images", json={"storyId": story_id})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"]["code"], "IMAGE_TARGET_REQUIRED")
+
+    def test_doubao_seedream_image_provider_generates_single_panel(self) -> None:
+        story_id = self._create_ready_script()
+        api_response = {
+            "data": [
+                {
+                    "b64_json": b64encode(b"fake-png-bytes").decode("ascii"),
+                }
+            ]
+        }
+
+        with patch.dict(
+            os.environ,
+            {
+                "IMAGE_PROVIDER": "doubao_seedream",
+                "DOUBAO_SEEDREAM_API_KEY": "test-key",
+            },
+            clear=True,
+        ):
+            with patch(
+                (
+                    "backend.app.providers.image.doubao_seedream_image_provider."
+                    "urllib.request.urlopen"
+                ),
+                return_value=_FakeOpenAIResponse(api_response),
+            ):
+                response = self.client.post(
+                    "/api/comic/mock-images",
+                    json={"storyId": story_id, "panelId": "panel_001_01"},
+                )
+
+        self.assertEqual(response.status_code, 201)
+        data = response.get_json()
+        self.assertEqual(data["imageCount"], 1)
+        image = data["images"][0]
+        self.assertEqual(image["provider"], "doubao_seedream")
+        self.assertEqual(image["status"], "generated")
+        self.assertEqual(image["panelId"], "panel_001_01")
+        self.assertTrue(Path(image["uri"]).exists())
+
+    def test_doubao_seedream_image_provider_accepts_url_response(self) -> None:
+        story_id = self._create_ready_script()
+        api_response = {"data": [{"url": "https://example.test/panel.png"}]}
+
+        with patch.dict(
+            os.environ,
+            {
+                "IMAGE_PROVIDER": "doubao_seedream",
+                "DOUBAO_SEEDREAM_API_KEY": "test-key",
+                "DOUBAO_SEEDREAM_RESPONSE_FORMAT": "url",
+            },
+            clear=True,
+        ):
+            with patch(
+                (
+                    "backend.app.providers.image.doubao_seedream_image_provider."
+                    "urllib.request.urlopen"
+                ),
+                return_value=_FakeOpenAIResponse(api_response),
+            ):
+                response = self.client.post(
+                    "/api/comic/mock-images",
+                    json={"storyId": story_id, "panelId": "panel_001_01"},
+                )
+
+        self.assertEqual(response.status_code, 201)
+        image = response.get_json()["images"][0]
+        self.assertEqual(image["provider"], "doubao_seedream")
+        self.assertEqual(image["uri"], "https://example.test/panel.png")
+
     def _create_outline(self) -> str:
         response = self.client.post(
             "/api/story/outline",

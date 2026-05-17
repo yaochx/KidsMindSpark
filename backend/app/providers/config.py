@@ -3,7 +3,12 @@ from __future__ import annotations
 import os
 
 from .errors import ProviderConfigError
-from .image import ImageProvider, MockImageProvider, OpenAIImageProvider
+from .image import (
+    DoubaoSeedreamImageProvider,
+    ImageProvider,
+    MockImageProvider,
+    OpenAIImageProvider,
+)
 from .story import (
     DeepSeekStoryProvider,
     MockStoryProvider,
@@ -36,6 +41,8 @@ def get_image_provider() -> ImageProvider:
         return MockImageProvider()
     if provider_name == "openai_image":
         return OpenAIImageProvider()
+    if provider_name == "doubao_seedream":
+        return DoubaoSeedreamImageProvider()
     raise ProviderConfigError(
         "PROVIDER_CONFIG_ERROR",
         "未知的 ImageProvider 配置。",

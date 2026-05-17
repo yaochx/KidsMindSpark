@@ -1,6 +1,6 @@
 # MVP API Spec
 
-所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI 或 DeepSeek StoryProvider；M9 已支持通过后端环境变量切换 OpenAI ImageProvider。
+所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI 或 DeepSeek StoryProvider；M9 已支持通过后端环境变量切换 OpenAI 或豆包 Seedream ImageProvider。
 
 Provider 配置示例：
 
@@ -35,6 +35,18 @@ OPENAI_API_KEY=<your_api_key>
 OPENAI_IMAGE_MODEL=gpt-image-1
 OPENAI_IMAGE_SIZE=1024x1024
 ```
+
+豆包 Seedream ImageProvider 配置示例：
+
+```text
+IMAGE_PROVIDER=doubao_seedream
+DOUBAO_SEEDREAM_API_KEY=<your_api_key>
+DOUBAO_SEEDREAM_MODEL=doubao-seedream-4-0-250828
+DOUBAO_SEEDREAM_SIZE=1024x1024
+DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
+```
+
+如火山控制台给出不同网关，可通过 `DOUBAO_SEEDREAM_ENDPOINT` 覆盖默认 endpoint。
 
 真实 API key 只能放在后端环境变量中，不允许出现在前端、Git、日志或 API 响应里。
 
@@ -296,6 +308,7 @@ OPENAI_IMAGE_SIZE=1024x1024
 - 不默认一次性生成完整 32 页全部分镜。
 - 图像 provider 不得修改故事、页数、分镜和对白结构。
 - OpenAI ImageProvider 将 base64 图片保存到后端本地 `backend/data/images/` 并写入 `ComicImage.uri`。
+- 豆包 Seedream ImageProvider 支持 `b64_json` 或 `url` 响应；`b64_json` 会保存到后端本地，`url` 会直接写入 `ComicImage.uri`。
 - 生成失败时应记录失败状态，并允许 mock fallback。
 
 ## GET /api/export/pdf
