@@ -1,4 +1,4 @@
-# 开发里程碑 M0-M11
+# 开发里程碑 M0-M14
 
 每次开发只实现一个 milestone。除非当前 milestone 明确要求，不得提前实现后续功能。
 
@@ -581,3 +581,160 @@ DeepSeek 可用于文本结构生成，但不能用于图片生成。
 - 不允许真实图像生成默认一次性跑完整 32 页全部分镜。
 - 不允许在 prompt builder 中改写对白、扩写剧情或新增角色。
 - 不允许把 prompt builder 做成某个单一 provider 的私有逻辑。
+
+## M12 Image Asset Cache 与真实图片预览/PDF 嵌图
+
+### 目标
+
+将真实 ImageProvider 生成的单格图片保存为可复用 Image Asset，并真正展示到漫画预览和 PDF 中。M12 同时解决“文生图成本高，需要历史缓存和候选图管理”以及“已有 `ComicImage.uri` 但前端和 PDF 只显示 uri 文本”的问题。
+
+### 交付物
+
+- Image Asset Cache：保存每次真实生图产物、prompt、`promptHash`、provider、model、size、状态和创建时间。
+- 同一 panel 允许保留多张候选图，不覆盖旧图。
+- 每个 panel 保存一个 `selectedImageId`，用于前端预览和 PDF 导出。
+- 缓存命中规则：相同 `provider + model + size + promptHash + panelId` 默认复用历史图片。
+- 用户主动“再生成一张”时创建新候选图，不覆盖已选图片。
+- 前端漫画预览中按 `panelId` 渲染真实图片。
+- 后端为本地生成图片提供安全可访问的本地预览 URL 或读取接口。
+- PDF 导出时把每个 panel 的 `selectedImageId` 对应图片嵌入分镜框。
+- 图片缺失、生成失败、远程 URL 不可用时保留清晰占位和错误状态。
+- 继续保留按单格或单页生成能力，不新增全量自动生成。
+
+### 文件清单
+
+- `frontend/components/comic/`
+- `frontend/lib/types/comic.ts`
+- `backend/app/api/`
+- `backend/app/export/`
+- `backend/app/storage/`
+- `backend/tests/`
+- `README.md`
+- `docs/API_SPEC.md`
+- `docs/ARCHITECTURE.md`
+
+### 验收标准
+
+- 已生成的单格图片在前端预览中显示为图片，而不是只显示 `uri` 字符串。
+- 同一个 panel 可以查看历史候选图，并明确当前选中图片。
+- 缓存命中时不得重复调用真实文生图 API。
+- 用户重新生成时必须新增候选图，不得覆盖历史候选图。
+- 每页仍按 1-4 个分镜拼接，图片必须落入对应分镜框。
+- PDF 中每个有选中图片的 panel 应嵌入对应图片，缺图时显示稳定占位。
+- PDF 仍保持漫画页结构、分镜边框、页码和必要文本信息。
+- 远程 URL 或本地图片读取失败时不得中断整个 32 页导出。
+- 不暴露本地任意文件读取能力，不允许通过图片接口读取非图片数据。
+
+### 不允许做的事情
+
+- 不允许在 M12 做一键全量真实生图。
+- 不允许改变故事页数、分镜数量或对白结构。
+- 不允许为了嵌图重写整个 PDF 导出架构。
+- 不允许把图片读取接口做成任意路径代理。
+- 不允许生成新图片时覆盖历史候选图。
+- 不允许缓存命中时重复消耗真实生图额度。
+- 不允许隐藏生成失败状态。
+
+## M13 批量生成队列、一键自动化与候选图挑选
+
+### 目标
+
+在 M11 prompt 稳定、M12 有 Image Asset Cache 后，增加可控的一键自动化生图流程。M13 允许用户一键为当前故事创建批量生成任务，但必须先查缓存、再按预算生成缺失图片，并提供进度状态、失败重试、单格 prompt 调整和候选图挑选能力。
+
+### 交付物
+
+- 批量生成任务模型和状态记录。
+- 一键生成入口：为当前故事缺失选中图片或缓存未命中的 panel 创建队列。
+- 队列执行前先查 Image Asset Cache，命中缓存则标记 `skipped` 或 `fromCache`，不调用真实 API。
+- 每页/每格生成状态：`pending`、`running`、`generated`、`failed`、`skipped`。
+- 单格 prompt 调整入口：允许用户查看 builder 生成的 prompt，编辑后重新生成该 panel。
+- 单格结果替换入口：允许用户从候选图里选择最终图片，也允许保留、重试或替换某个 panel 的图片。
+- 调用预算限制：限制单次任务最大生图张数、最大重试次数和总调用次数。
+- 队列失败可恢复，不覆盖已确认可用图片。
+
+### 文件清单
+
+- `frontend/components/comic/`
+- `frontend/lib/api/`
+- `frontend/lib/types/`
+- `backend/app/api/`
+- `backend/app/services/`
+- `backend/app/providers/image/`
+- `backend/app/storage/`
+- `backend/tests/`
+- `README.md`
+- `docs/API_SPEC.md`
+- `docs/ARCHITECTURE.md`
+
+### 验收标准
+
+- 用户可以一键创建批量生图任务，但任务必须受预算限制。
+- 一键任务必须优先复用缓存，只有缓存未命中或用户明确要求新候选图时才调用真实 API。
+- 用户可以按页查看每个 panel 的生成进度和结果。
+- 用户可以对单个 panel 调整 prompt 并重新生成新候选图，不需要重跑整本。
+- 用户可以从某个 panel 的候选图中选择最终图片。
+- 失败 panel 不影响已成功 panel，不删除脚本、主线或已有图片。
+- 任务不会默认无限重试，不会无限消耗 token 或图片额度。
+- 自动化流程完成后，M12 的前端预览和 PDF 导出能使用生成结果。
+
+### 不允许做的事情
+
+- 不允许无限制一键生成。
+- 不允许跳过缓存直接批量调用真实生图 API。
+- 不允许隐藏预计调用次数和当前消耗。
+- 不允许失败后自动反复重试到耗尽额度。
+- 不允许用户调整 prompt 时改写故事结构、页数、分镜或对白数据。
+- 不允许把批量任务设计成必须同步阻塞等待全部完成。
+- 不允许绕过 M11 prompt builder 直接调用真实图像 provider。
+
+## M14 故事优先页数与本地项目/预算模型
+
+### 目标
+
+将“固定 32 页”升级为“故事表达优先，但受页数、分镜数和生图预算约束”的 bounded 模式。M14 解决固定页数不利于故事表达的问题，同时避免文生图次数失控。M14 还引入轻量本地项目概念，用于管理故事、缓存、候选图和预算，不引入正式账户系统。
+
+### 交付物
+
+- 本地项目模型：`workspaceId=local_default`、`projectId`、`storyId`。
+- 页数策略：例如 `pagePolicy.mode=story_first_bounded`。
+- 页数范围：默认 16-48 页。
+- 分镜预算：每页 1-4 格，单故事最多 96 个 panel。
+- 生图预算：单故事最多生成 96 张图片，单批任务最多 12-24 张图片，每个 panel 最多保留 4 张候选图。
+- StoryProvider 生成脚本时根据故事表达决定页数，但必须落在预算范围内。
+- UI 和导出逻辑读取实际页数，不再写死 32 页。
+- 文档同步替换“固定 32 页”硬约束。
+
+### 文件清单
+
+- `docs/AI_CONTRACT.md`
+- `docs/PRD.md`
+- `docs/STORY_FLOW.md`
+- `docs/UI_RULES.md`
+- `docs/DATA_MODEL.md`
+- `docs/API_SPEC.md`
+- `docs/ARCHITECTURE.md`
+- `docs/MILESTONE.md`
+- `README.md`
+- `backend/app/services/`
+- `backend/app/providers/story/`
+- `backend/app/storage/`
+- `backend/tests/`
+- `frontend/components/`
+- `frontend/lib/types/`
+
+### 验收标准
+
+- 系统不再要求故事必须正好 32 页，但必须有明确页数上下限。
+- 生成脚本必须满足页数范围、每页 1-4 格、最大 panel 数和短对白约束。
+- 生图任务必须受单故事、单批次、单 panel 候选数预算限制。
+- 本地项目能隔离不同故事的缓存、候选图和预算记录。
+- 旧的 32 页故事数据仍可读取和导出。
+- 文档、测试和 UI 文案不再把 32 页作为不可违反硬约束。
+
+### 不允许做的事情
+
+- 不允许无限页数、无限分镜或无限续写。
+- 不允许取消主线确认流程。
+- 不允许为了故事表达放弃生图预算。
+- 不允许在 M14 引入正式账号、登录、班级权限或公开部署。
+- 不允许破坏已有 32 页故事的兼容性。

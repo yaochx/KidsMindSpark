@@ -196,6 +196,9 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 - M9 真实 ImageProvider 接入：已完成。
 - M10 真实工作流稳定化：规划中。
 - M11 Panel Prompt Builder：规划中。
+- M12 Image Asset Cache 与真实图片预览/PDF 嵌图：规划中。
+- M13 批量生成队列、一键自动化与候选图挑选：规划中。
+- M14 故事优先页数与本地项目/预算模型：规划中。
 
 ## 真实 API 接入路线
 
@@ -207,9 +210,14 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 2. M8: 接入一个真实文本 provider，用于故事、主线、32 页脚本和 `imagePrompt`。
 3. M9: 接入一个真实图像 provider，优先支持单 panel 或单页生成。
 4. M10: 补齐 fallback、缓存、错误处理、调用次数限制和测试。
-5. M11: 新增 `build_panel_image_prompt(story, page, panel)`，不再让真实 ImageProvider 直接原样消费 `panel.imagePrompt`，而是用结构化 `story/page/panel` 构建完整单格漫画 prompt。
+5. M11: 新增 `build_panel_image_prompt(story, page, panel)` 和 `promptHash`，不再让真实 ImageProvider 直接原样消费 `panel.imagePrompt`，而是用结构化 `story/page/panel` 构建完整单格漫画 prompt。
+6. M12: 新增 Image Asset Cache，把真实生图产物保存为可复用候选图，并将选中图片渲染到前端漫画预览和 PDF 分镜框。
+7. M13: 增加基于缓存的批量生成队列和一键自动化能力，支持按页/按格查看状态、调整单格 prompt、重生成候选图、从候选图中选择最终结果，并用调用预算限制真实生图次数。
+8. M14: 将固定 32 页约束升级为故事优先但有边界的页数/分镜/生图预算模型，并增加本地项目概念管理故事、缓存和预算。
 
-M11 的 prompt builder 会融合角色设定、页码和分镜号、场景、镜头、动作、`panel.imagePrompt`、中文对白气泡内容、儿童安全约束和单格漫画构图要求。默认策略是让豆包 Seedream 等图片模型生成单格画面和中文漫画对白气泡；应用继续负责拼页、边框、页码和 PDF。对白气泡内只允许写 `dialogue.text`，不得写角色名、冒号或编号；说话角色必须通过气泡尾巴、指向线和靠近对应角色的位置表达。
+M11 的 prompt builder 会融合角色设定、页码和分镜号、场景、镜头、动作、`panel.imagePrompt`、中文对白气泡内容、儿童安全约束和单格漫画构图要求，并为 prompt 生成稳定 `promptHash`。默认策略是让豆包 Seedream 等图片模型生成单格画面和中文漫画对白气泡；应用继续负责拼页、边框、页码和 PDF。对白气泡内只允许写 `dialogue.text`，不得写角色名、冒号或编号；说话角色必须通过气泡尾巴、指向线和靠近对应角色的位置表达。
+
+M12/M13 的目标是把“单格图片生成”变成可缓存、可挑选、可重试、可导出的漫画制作流程：先保存历史产物和候选图，再做一键批量队列。当前文档仍保留固定 32 页 MVP 约束；M14 会把固定页数替换为故事表达优先的 bounded 模式，例如页数 16-48、最多 96 个 panel、每次批量最多生成 12-24 张图片。
 
 本地 provider 配置示例：
 

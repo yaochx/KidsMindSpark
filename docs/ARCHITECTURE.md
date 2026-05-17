@@ -92,8 +92,11 @@ docs/
 - StoryProvider: 生成核心设定、主线、32 页分镜和每格 `imagePrompt`。
 - Panel Prompt Builder: 基于 `story/page/panel` 构建单格漫画图片 prompt，融合角色设定、分镜结构、中文对白气泡和儿童安全约束；对白气泡内只写对白文本，角色归属由气泡尾巴或指向线表达。
 - ImageProvider: 根据 Panel Prompt Builder 输出的 prompt 生成漫画图像或 mock 图像占位数据。
-- Comic Preview: 以漫画页方式展示图片、对白、旁白和页码。
-- PDF Export: 导出 A4 预览 PDF，后续升级 32 开打印。
+- Image Asset Cache: M12 规划的图片资产层，保存真实生图历史产物、promptHash、候选图和 `selectedImageId`。
+- Comic Preview: 以漫画页方式展示图片、对白、旁白和页码；M12 后应把选中的真实图片渲染到对应分镜框。
+- PDF Export: 导出 A4 预览 PDF，M12 后应嵌入选中的真实分镜图片，后续升级 32 开打印。
+- Batch Generation Queue: M13 规划的一键自动化任务层，负责缓存命中、预算限制、状态追踪、失败重试、候选图挑选和单格重生成。
+- Local Project/Budget Model: M14 规划的本地项目层，用 `workspaceId=local_default`、`projectId` 管理故事、缓存和预算，不引入正式账号系统。
 
 ## M7 Provider 配置原则
 
@@ -114,6 +117,9 @@ IMAGE_PROVIDER=mock
 - M9: 只接入一个真实 ImageProvider，优先单 panel 或单页生成。
 - M10: 稳定真实工作流，补齐 fallback、缓存、错误处理、调用次数限制和测试。
 - M11: 新增统一 Panel Prompt Builder，真实 ImageProvider 不再直接原样消费 `panel.imagePrompt`。
+- M12: Image Asset Cache、候选图管理、真实图片进入前端预览和 PDF 分镜框。
+- M13: 基于缓存的批量生成队列和一键自动化，允许单格 prompt 调整、候选图挑选和结果重生成。
+- M14: 故事优先页数与本地项目/预算模型，用 bounded 规则替代固定 32 页。
 
 真实 API key 只允许通过后端环境变量读取：
 
