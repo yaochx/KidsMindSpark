@@ -1,4 +1,4 @@
-# 开发里程碑 M0-M6
+# 开发里程碑 M0-M7
 
 每次开发只实现一个 milestone。除非当前 milestone 明确要求，不得提前实现后续功能。
 
@@ -242,3 +242,67 @@
 - 不允许大规模重写已稳定流程。
 - 不允许新增非 MVP 功能。
 - 不允许引入无限续写或聊天入口。
+
+## M7 Provider 拆分与真实模型预备层
+
+### 目标
+
+将当前混合 mock 生成能力拆成两个独立 provider 边界：`StoryProvider` 和 `ImageProvider`。M7 只建立可切换、可校验、可回退的 provider 架构，为后续接入 ChatGPT/OpenAI、MiniMax、GLM、DeepSeek 等文本模型，以及 OpenAI Images、MiniMax Image、可灵、即梦、通义万相等图像模型做准备。
+
+### Provider 边界
+
+- `StoryProvider`
+  - 负责故事核心设定。
+  - 负责图形化主线节点。
+  - 负责固定 32 页漫画分镜脚本。
+  - 负责生成每个分镜的 `imagePrompt`。
+  - 可选实现：`mock`、`openai`、`deepseek`、`glm`、`minimax`。
+
+- `ImageProvider`
+  - 负责根据 `Panel.imagePrompt` 生成或返回分镜图像。
+  - 负责输出 `ComicImage` 记录。
+  - 不负责改写故事、页数、对白和分镜结构。
+  - 可选实现：`mock`、`openai_image`、`minimax_image`、`kling`、`jimeng`、`wanxiang`。
+
+### 交付物
+
+- Provider interface 文档和代码骨架。
+- `StoryProvider` 与 `ImageProvider` 分离后的 mock 实现。
+- provider 选择配置，例如 `STORY_PROVIDER=mock`、`IMAGE_PROVIDER=mock`。
+- 真实 provider 的环境变量占位和错误提示，但不强制接入真实 API。
+- 现有 M1-M6 流程不变。
+- 后端测试继续覆盖固定 32 页、每页 1-4 个分镜、短对白、预览和 PDF 导出。
+
+### 文件清单
+
+- `backend/app/providers/story/`
+- `backend/app/providers/image/`
+- `backend/app/providers/config.py`
+- `backend/app/services/story_service.py`
+- `backend/app/services/timeline_service.py`
+- `backend/app/services/script_service.py`
+- `backend/app/services/mock_image_service.py`
+- `backend/tests/`
+- `docs/ARCHITECTURE.md`
+- `docs/API_SPEC.md`
+- `docs/M7_PROVIDER_PLAN.md`
+- `README.md`
+
+### 验收标准
+
+- Story 与 Image provider 边界清晰，服务层不直接依赖具体厂商实现。
+- 默认配置仍使用 mock provider，现有本地流程可完整跑通。
+- DeepSeek 等纯文本模型只能挂到 `StoryProvider`，不得被当作 `ImageProvider`。
+- 图像 provider 只能消费已生成的 `imagePrompt` 和 panel 数据，不得改变 32 页脚本结构。
+- 所有真实 provider 输出必须经过现有结构校验。
+- 未配置真实 API key 时必须返回友好错误或自动使用 mock，不能在前端暴露 key。
+- 不破坏 M1-M6 API。
+
+### 不允许做的事情
+
+- 不允许把 API key 写入前端、代码或 Git。
+- 不允许把 ChatGPT Pro、Codex login、浏览器 cookie 或个人会话当作应用 provider。
+- 不允许一次性接入多个真实文本模型和多个真实图像模型。
+- 不允许真实图像生成默认一次性跑完整 32 页全部分镜。
+- 不允许绕过主线确认、32 页、1-4 分镜、短对白等硬约束。
+- 不允许把图像 provider 设计成能改写故事正文。
