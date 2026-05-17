@@ -43,6 +43,7 @@ flowchart TD
 - M4: 只做漫画预览和 mock 图片。
 - M5: 只做 PDF 导出。
 - M6: 只做优化与测试。
+- M7: 只做 StoryProvider 与 ImageProvider 拆分，不接真实模型。
 
 ## 每次自检
 

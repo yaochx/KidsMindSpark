@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from ..providers.config import ProviderConfigError, get_image_provider
 from ..storage.json_store import load_story, save_story
 
 
@@ -28,24 +29,10 @@ def generate_mock_images(payload: dict[str, Any]) -> dict[str, Any]:
     pages = story.get("pages", [])
     _validate_pages_for_preview(pages)
 
-    images: list[dict[str, Any]] = []
-    for page in pages:
-        for panel in page["panels"]:
-            image_id = f"img_{panel['id']}"
-            panel["imageId"] = image_id
-            images.append(
-                {
-                    "id": image_id,
-                    "panelId": panel["id"],
-                    "provider": "mock",
-                    "status": "generated",
-                    "uri": f"/mock-images/color-comic-placeholder-{page['pageNumber']:03d}-{panel['panelNumber']:02d}.svg",
-                    "prompt": panel["imagePrompt"],
-                    "width": 1024,
-                    "height": 768,
-                    "style": story.get("visualStyle", "mixed_east_asian_color_comic"),
-                }
-            )
+    try:
+        images = get_image_provider().create_images(story)
+    except ProviderConfigError as error:
+        raise MockImageError(error.code, error.message, error.details) from error
 
     story["pages"] = pages
     story["images"] = images

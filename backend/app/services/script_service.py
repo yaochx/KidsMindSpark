@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from ..providers.mock_provider import create_script_pages
+from ..providers.config import ProviderConfigError, get_story_provider
 from ..storage.json_store import load_story, save_story
 
 
@@ -33,7 +33,10 @@ def generate_story_script(payload: dict[str, Any]) -> dict[str, Any]:
     if len(story.get("timeline", [])) != 9:
         raise ScriptError("TIMELINE_NOT_CONFIRMED", "请先确认完整的图形化故事主线。")
 
-    pages = create_script_pages(story)
+    try:
+        pages = get_story_provider().create_script_pages(story)
+    except ProviderConfigError as error:
+        raise ScriptError(error.code, error.message, error.details) from error
     _validate_script_pages(pages)
 
     story["pages"] = pages

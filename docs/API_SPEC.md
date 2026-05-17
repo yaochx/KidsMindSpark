@@ -1,6 +1,15 @@
 # MVP API Spec
 
-所有 API 在 MVP 阶段使用 mock 行为。本地 JSON 是默认持久化方式。
+所有 API 在 M0-M7 阶段默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 以后可通过后端环境变量切换真实 StoryProvider；M9 以后可通过后端环境变量切换真实 ImageProvider。
+
+Provider 配置示例：
+
+```text
+STORY_PROVIDER=mock
+IMAGE_PROVIDER=mock
+```
+
+真实 API key 只能放在后端环境变量中，不允许出现在前端、Git、日志或 API 响应里。
 
 ## 通用错误格式
 
@@ -50,6 +59,13 @@
 - 将危险道具改写为安全冒险道具。
 - 返回核心设定，不生成主线、不生成正文。
 
+### M8 真实 StoryProvider 行为
+
+- 可由真实文本 provider 生成核心设定。
+- 输出必须解析为结构化 JSON。
+- 解析失败或结构不合格时不得落库。
+- 仍必须执行儿童适龄改写和后端校验。
+
 ## POST /api/story/timeline
 
 ### Request
@@ -88,6 +104,12 @@
 
 - 生成固定 9 类主线节点：开场、主角、目标、伙伴、阻碍、转折、危机、解决、结局。
 - 不生成 32 页分镜。
+
+### M8 真实 StoryProvider 行为
+
+- 可由真实文本 provider 生成 9 类主线节点。
+- 缺少必需节点、顺序非法或节点过长时必须返回错误。
+- 用户确认前仍不得生成 32 页分镜。
 
 ## PUT /api/story/timeline
 
@@ -172,6 +194,12 @@
 - 每页生成 1-4 个 `Panel`。
 - 每页对白保持短句。
 
+### M8 真实 StoryProvider 行为
+
+- 可由真实文本 provider 生成 32 页分镜脚本。
+- 每个 panel 必须包含可供图像 provider 使用的 `imagePrompt`。
+- 不满足 32 页、1-4 分镜或短对白约束时必须拒绝落库。
+
 ## POST /api/comic/mock-images
 
 ### Request
@@ -212,6 +240,14 @@
 - 为每个 panel 生成一个 mock image 记录。
 - 图片可以是本地占位 SVG/PNG 或前端占位 URI。
 - 不调用真实图像生成。
+
+### M9 真实 ImageProvider 行为
+
+- 可由真实图像 provider 根据 `Panel.imagePrompt` 生成图片。
+- 优先支持单 panel 或单页生成。
+- 不默认一次性生成完整 32 页全部分镜。
+- 图像 provider 不得修改故事、页数、分镜和对白结构。
+- 生成失败时应记录失败状态，并允许 mock fallback。
 
 ## GET /api/export/pdf
 

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import importlib
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 class MvpFlowTest(unittest.TestCase):
@@ -62,6 +64,33 @@ class MvpFlowTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["error"]["code"], "PREVIEW_REQUIRED")
+
+    def test_unknown_story_provider_returns_clear_error(self) -> None:
+        with patch.dict(os.environ, {"STORY_PROVIDER": "unknown"}, clear=False):
+            response = self.client.post(
+                "/api/story/outline",
+                json={
+                    "title": "三只小猫的森林桃源",
+                    "concept": "三只小猫带着木头探险杖去森林冒险。",
+                    "targetAge": "小学 1-4 年级",
+                    "visualStyle": "mixed_east_asian_color_comic",
+                },
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"]["code"], "PROVIDER_CONFIG_ERROR")
+
+    def test_unknown_image_provider_returns_clear_error(self) -> None:
+        story_id = self._create_outline()
+        timeline = self._create_timeline(story_id)
+        self._confirm_timeline(story_id, timeline)
+        self._create_script(story_id)
+
+        with patch.dict(os.environ, {"IMAGE_PROVIDER": "unknown"}, clear=False):
+            response = self.client.post("/api/comic/mock-images", json={"storyId": story_id})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"]["code"], "PROVIDER_CONFIG_ERROR")
 
     def _create_outline(self) -> str:
         response = self.client.post(

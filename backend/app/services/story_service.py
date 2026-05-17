@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import uuid4
 
-from ..providers.mock_provider import create_outline
+from ..providers.config import ProviderConfigError, get_story_provider
 from ..storage.json_store import save_story
 
 SUPPORTED_AGES = {"小学 1-4 年级", "小学 5-6 年级"}
@@ -26,7 +26,10 @@ class StoryValidationError(ValueError):
 def create_story_outline(payload: dict[str, Any]) -> dict[str, Any]:
     normalized = _validate_outline_payload(payload)
     story_id = f"story_{uuid4().hex[:12]}"
-    outline = create_outline(normalized, story_id)
+    try:
+        outline = get_story_provider().create_outline(normalized, story_id)
+    except ProviderConfigError as error:
+        raise StoryValidationError(error.code, error.message, error.details) from error
     now = datetime.now(timezone.utc).isoformat()
 
     story = {

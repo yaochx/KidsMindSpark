@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from ..providers.mock_provider import create_timeline
+from ..providers.config import ProviderConfigError, get_story_provider
 from ..storage.json_store import load_story, save_story
 
 REQUIRED_NODE_TYPES = [
@@ -38,7 +38,10 @@ def generate_story_timeline(payload: dict[str, Any]) -> dict[str, Any]:
     if story.get("status") not in {"outlined", "timeline_confirmed"}:
         raise TimelineError("OUTLINE_REQUIRED", "请先生成故事核心设定。")
 
-    timeline = create_timeline(story)
+    try:
+        timeline = get_story_provider().create_timeline(story)
+    except ProviderConfigError as error:
+        raise TimelineError(error.code, error.message, error.details) from error
     story["timeline"] = timeline
     story["updatedAt"] = datetime.now(timezone.utc).isoformat()
     if story.get("status") != "timeline_confirmed":
