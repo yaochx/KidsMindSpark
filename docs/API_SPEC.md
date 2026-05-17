@@ -1,6 +1,6 @@
 # MVP API Spec
 
-所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI StoryProvider；M9 已支持通过后端环境变量切换 OpenAI ImageProvider。
+所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI 或 DeepSeek StoryProvider；M9 已支持通过后端环境变量切换 OpenAI ImageProvider。
 
 Provider 配置示例：
 
@@ -15,6 +15,15 @@ OpenAI StoryProvider 配置示例：
 STORY_PROVIDER=openai
 OPENAI_API_KEY=<your_api_key>
 OPENAI_STORY_MODEL=gpt-4o-mini
+IMAGE_PROVIDER=mock
+```
+
+DeepSeek StoryProvider 配置示例：
+
+```text
+STORY_PROVIDER=deepseek
+DEEPSEEK_API_KEY=<your_api_key>
+DEEPSEEK_STORY_MODEL=deepseek-v4-flash
 IMAGE_PROVIDER=mock
 ```
 

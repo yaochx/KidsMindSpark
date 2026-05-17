@@ -4,7 +4,12 @@ import os
 
 from .errors import ProviderConfigError
 from .image import ImageProvider, MockImageProvider, OpenAIImageProvider
-from .story import MockStoryProvider, OpenAIStoryProvider, StoryProvider
+from .story import (
+    DeepSeekStoryProvider,
+    MockStoryProvider,
+    OpenAIStoryProvider,
+    StoryProvider,
+)
 
 DEFAULT_STORY_PROVIDER = "mock"
 DEFAULT_IMAGE_PROVIDER = "mock"
@@ -16,6 +21,8 @@ def get_story_provider() -> StoryProvider:
         return MockStoryProvider()
     if provider_name == "openai":
         return OpenAIStoryProvider()
+    if provider_name == "deepseek":
+        return DeepSeekStoryProvider()
     raise ProviderConfigError(
         "PROVIDER_CONFIG_ERROR",
         "未知的 StoryProvider 配置。",

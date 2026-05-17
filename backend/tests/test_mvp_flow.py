@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from backend.app.providers.errors import ProviderResponseError
+from backend.app.providers.story.deepseek_story_provider import DeepSeekStoryProvider
 from backend.app.providers.story.openai_story_provider import OpenAIStoryProvider
 
 
@@ -159,6 +160,77 @@ class MvpFlowTest(unittest.TestCase):
             ):
                 with self.assertRaises(ProviderResponseError):
                     OpenAIStoryProvider().create_outline(
+                        {
+                            "title": "三只小猫的森林桃源",
+                            "concept": "三只小猫带着木头探险杖去森林冒险。",
+                            "targetAge": "小学 1-4 年级",
+                            "visualStyle": "mixed_east_asian_color_comic",
+                        },
+                        "story_test",
+                    )
+
+    def test_deepseek_story_provider_requires_api_key(self) -> None:
+        with patch.dict(os.environ, {"STORY_PROVIDER": "deepseek"}, clear=True):
+            response = self.client.post(
+                "/api/story/outline",
+                json={
+                    "title": "三只小猫的森林桃源",
+                    "concept": "三只小猫带着木头探险杖去森林冒险。",
+                    "targetAge": "小学 1-4 年级",
+                    "visualStyle": "mixed_east_asian_color_comic",
+                },
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"]["code"], "PROVIDER_CONFIG_ERROR")
+
+    def test_deepseek_story_provider_parses_outline_response(self) -> None:
+        api_response = {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "title": "三只小猫的森林桃源",
+                                "safeConcept": "三只小猫带着木头探险杖去森林冒险。",
+                                "characters": [],
+                            },
+                            ensure_ascii=False,
+                        )
+                    }
+                }
+            ]
+        }
+
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "backend.app.providers.story.deepseek_story_provider.urllib.request.urlopen",
+                return_value=_FakeOpenAIResponse(api_response),
+            ):
+                outline = DeepSeekStoryProvider().create_outline(
+                    {
+                        "title": "三只小猫的森林桃源",
+                        "concept": "三只小猫拿着猎枪去森林冒险。",
+                        "targetAge": "小学 1-4 年级",
+                        "visualStyle": "mixed_east_asian_color_comic",
+                    },
+                    "story_test",
+                )
+
+        self.assertEqual(outline["storyId"], "story_test")
+        self.assertIn("木头探险杖", outline["safeConcept"])
+        self.assertEqual(outline["status"], "outlined")
+
+    def test_deepseek_story_provider_rejects_invalid_json_text(self) -> None:
+        api_response = {"choices": [{"message": {"content": "不是 JSON"}}]}
+
+        with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "test-key"}, clear=True):
+            with patch(
+                "backend.app.providers.story.deepseek_story_provider.urllib.request.urlopen",
+                return_value=_FakeOpenAIResponse(api_response),
+            ):
+                with self.assertRaises(ProviderResponseError):
+                    DeepSeekStoryProvider().create_outline(
                         {
                             "title": "三只小猫的森林桃源",
                             "concept": "三只小猫带着木头探险杖去森林冒险。",
