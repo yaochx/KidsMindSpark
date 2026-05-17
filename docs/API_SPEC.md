@@ -342,6 +342,75 @@ DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
 - 用户必须能从候选图中选择某个 panel 的最终图片。
 - 批量任务不得修改故事、页数、分镜、对白或已确认主线。
 
+## POST /api/comic/generation-jobs
+
+### Request
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "maxImages": 12,
+  "forceNew": false
+}
+```
+
+### Response
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "job": {
+    "id": "job_001",
+    "storyId": "story_cat_adventure_001",
+    "status": "completed",
+    "budget": {
+      "maxImages": 12,
+      "maxRetriesPerPanel": 0
+    },
+    "items": []
+  },
+  "images": [],
+  "imageAssets": [],
+  "status": "generation_job_completed"
+}
+```
+
+### M13 行为
+
+- `maxImages` 必须在 1-24 之间。
+- 默认只为缺失选中图片的 panel 创建任务。
+- `forceNew=true` 时会为目标 panel 生成新候选图。
+- 执行前必须优先复用 Image Asset Cache。
+
+## PUT /api/comic/images/select
+
+### Request
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "panelId": "panel_001_01",
+  "imageId": "img_panel_001_01_xxxxxxxx"
+}
+```
+
+### Response
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "image": {},
+  "images": [],
+  "imageAssets": [],
+  "status": "image_selected"
+}
+```
+
+### M13 行为
+
+- 只能选择属于该 `panelId` 的已存在候选图。
+- 选择后会更新该 panel 的 `selectedImageId`，并更新当前预览使用的 `images`。
+
 ### M14 故事优先页数与预算行为
 
 - 后续可将固定 32 页升级为 `story_first_bounded` 页数策略。

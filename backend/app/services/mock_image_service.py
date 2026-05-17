@@ -63,8 +63,125 @@ def generate_mock_images(payload: dict[str, Any]) -> dict[str, Any]:
     return {
         "storyId": story_id,
         "images": images,
+        "imageAssets": story.get("imageAssets", []),
         "imageCount": len(images),
         "status": "preview_generated",
+    }
+
+
+def create_generation_job(payload: dict[str, Any]) -> dict[str, Any]:
+    story_id = str(payload.get("storyId", "")).strip()
+    if not story_id:
+        raise MockImageError("VALIDATION_ERROR", "storyId 不能为空。")
+
+    story = load_story(story_id)
+    if story is None:
+        raise MockImageError("STORY_NOT_FOUND", "找不到这个故事。")
+    pages = story.get("pages", [])
+    _validate_pages_for_preview(pages)
+
+    max_images = _generation_budget(payload.get("maxImages", 12))
+    selected_by_panel = {
+        str(image.get("panelId")): image for image in story.get("images", [])
+    }
+    candidate_panels = [
+        panel
+        for page in pages
+        for panel in page.get("panels", [])
+        if payload.get("forceNew") or panel.get("id") not in selected_by_panel
+    ][:max_images]
+
+    job_items: list[dict[str, Any]] = []
+    images: list[dict[str, Any]] = []
+    for panel in candidate_panels:
+        panel_id = str(panel.get("id", ""))
+        try:
+            result = generate_mock_images(
+                {
+                    "storyId": story_id,
+                    "panelId": panel_id,
+                    "forceNew": bool(payload.get("forceNew")),
+                }
+            )
+            image = result["images"][0] if result.get("images") else {}
+            images.append(image)
+            job_items.append(
+                {
+                    "panelId": panel_id,
+                    "status": image.get("status", "generated"),
+                    "imageId": image.get("id", ""),
+                    "fromCache": bool(image.get("fromCache")),
+                    "retryCount": 0,
+                }
+            )
+        except MockImageError as error:
+            job_items.append(
+                {
+                    "panelId": panel_id,
+                    "status": "failed",
+                    "imageId": "",
+                    "fromCache": False,
+                    "retryCount": 0,
+                    "error": error.message,
+                }
+            )
+
+    story = load_story(story_id) or story
+    now = datetime.now(timezone.utc).isoformat()
+    job = {
+        "id": f"job_{now.replace(':', '').replace('-', '').replace('.', '')}",
+        "storyId": story_id,
+        "status": "completed",
+        "budget": {
+            "maxImages": max_images,
+            "maxRetriesPerPanel": 0,
+        },
+        "items": job_items,
+        "createdAt": now,
+        "completedAt": now,
+    }
+    story.setdefault("generationJobs", []).append(job)
+    story["updatedAt"] = now
+    save_story(story_id, story)
+
+    return {
+        "storyId": story_id,
+        "job": job,
+        "images": images,
+        "imageAssets": story.get("imageAssets", []),
+        "status": "generation_job_completed",
+    }
+
+
+def select_panel_image(payload: dict[str, Any]) -> dict[str, Any]:
+    story_id = str(payload.get("storyId", "")).strip()
+    panel_id = str(payload.get("panelId", "")).strip()
+    image_id = str(payload.get("imageId", "")).strip()
+    if not story_id or not panel_id or not image_id:
+        raise MockImageError("VALIDATION_ERROR", "storyId、panelId 和 imageId 不能为空。")
+
+    story = load_story(story_id)
+    if story is None:
+        raise MockImageError("STORY_NOT_FOUND", "找不到这个故事。")
+    image = _find_image_asset(story.get("imageAssets", []), panel_id, image_id)
+    if image is None:
+        raise MockImageError("IMAGE_NOT_FOUND", "找不到可选择的候选图。")
+
+    for page in story.get("pages", []):
+        for panel in page.get("panels", []):
+            if panel.get("id") == panel_id:
+                panel["imageId"] = image_id
+                panel["selectedImageId"] = image_id
+
+    story["images"] = _merge_images(story.get("images", []), [image])
+    story["updatedAt"] = datetime.now(timezone.utc).isoformat()
+    save_story(story_id, story)
+    return {
+        "storyId": story_id,
+        "image": image,
+        "images": story["images"],
+        "imageAssets": story.get("imageAssets", []),
+        "status": "image_selected",
     }
 
 
@@ -149,6 +266,25 @@ def _build_generation_target(payload: dict[str, Any]) -> ImageGenerationTarget |
             "pageNumber 必须是 1-32 的整数。",
         )
     return ImageGenerationTarget(page_number=page_number)
+
+
+def _generation_budget(raw_max_images: object) -> int:
+    try:
+        max_images = int(raw_max_images)
+    except (TypeError, ValueError) as error:
+        raise MockImageError("VALIDATION_ERROR", "maxImages 必须是 1-24 的整数。") from error
+    if not 1 <= max_images <= 24:
+        raise MockImageError("VALIDATION_ERROR", "maxImages 必须是 1-24 的整数。")
+    return max_images
+
+
+def _find_image_asset(
+    image_assets: list[dict[str, Any]], panel_id: str, image_id: str
+) -> dict[str, Any] | None:
+    for image in image_assets:
+        if image.get("panelId") == panel_id and image.get("id") == image_id:
+            return image
+    return None
 
 
 def _select_target_panels(

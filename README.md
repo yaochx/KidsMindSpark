@@ -2,7 +2,7 @@
 
 儿童中式/日式彩色漫画故事生成 MVP。
 
-当前进度：M12 Image Asset Cache 与真实图片预览/PDF 嵌图。
+当前进度：M13 批量生成队列、一键自动化与候选图挑选。
 
 ## 开发约束
 
@@ -11,7 +11,7 @@
 1. `docs/AI_CONTRACT.md`
 2. `docs/MILESTONE.md`
 
-当前已包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI / DeepSeek StoryProvider、可选 OpenAI / 豆包 Seedream ImageProvider、统一 Panel Prompt Builder，以及真实图片缓存、预览和 PDF 嵌图能力。
+当前已包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI / DeepSeek StoryProvider、可选 OpenAI / 豆包 Seedream ImageProvider、统一 Panel Prompt Builder、真实图片缓存、预览和 PDF 嵌图能力，以及受预算限制的批量生成队列。
 
 ## 前端启动
 
@@ -197,7 +197,7 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 - M10 真实工作流稳定化：规划中。
 - M11 Panel Prompt Builder：已完成。
 - M12 Image Asset Cache 与真实图片预览/PDF 嵌图：已完成。
-- M13 批量生成队列、一键自动化与候选图挑选：规划中。
+- M13 批量生成队列、一键自动化与候选图挑选：已完成。
 - M14 故事优先页数与本地项目/预算模型：规划中。
 
 ## 真实 API 接入路线

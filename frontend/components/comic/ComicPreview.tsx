@@ -3,7 +3,11 @@
 import { useMemo, useState } from "react";
 import { PdfExportPanel } from "@/components/export/PdfExportPanel";
 import { apiUrl } from "@/lib/api/client";
-import { createMockComicImages } from "@/lib/api/comic";
+import {
+  createGenerationJob,
+  createMockComicImages,
+  selectPanelImage
+} from "@/lib/api/comic";
 import type { ComicImage } from "@/lib/types/comic";
 import type { ScriptPage } from "@/lib/types/script";
 
@@ -21,12 +25,23 @@ const paletteClasses = [
 
 export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
   const [images, setImages] = useState<ComicImage[]>([]);
+  const [imageAssets, setImageAssets] = useState<ComicImage[]>([]);
   const [error, setError] = useState("");
   const [loadingTarget, setLoadingTarget] = useState("");
 
   const imageByPanelId = useMemo(() => {
     return new Map(images.map((image) => [image.panelId, image]));
   }, [images]);
+
+  const assetsByPanelId = useMemo(() => {
+    const grouped = new Map<string, ComicImage[]>();
+    imageAssets.forEach((image) => {
+      const items = grouped.get(image.panelId) ?? [];
+      items.push(image);
+      grouped.set(image.panelId, items);
+    });
+    return grouped;
+  }, [imageAssets]);
 
   async function handleGenerateImages(
     payload: { panelId?: string; pageNumber?: number },
@@ -38,8 +53,45 @@ export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
     try {
       const result = await createMockComicImages({ storyId, ...payload });
       setImages((currentImages) => mergeImages(currentImages, result.images));
+      setImageAssets((currentAssets) =>
+        mergeAssets(currentAssets, result.imageAssets ?? result.images)
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "漫画预览生成失败。");
+    } finally {
+      setLoadingTarget("");
+    }
+  }
+
+  async function handleCreateGenerationJob(forceNew = false) {
+    setLoadingTarget(forceNew ? "batch-force" : "batch");
+    setError("");
+
+    try {
+      const result = await createGenerationJob({ storyId, maxImages: 12, forceNew });
+      setImages((currentImages) => mergeImages(currentImages, result.images));
+      setImageAssets((currentAssets) =>
+        mergeAssets(currentAssets, result.imageAssets ?? result.images)
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "批量生图任务失败。");
+    } finally {
+      setLoadingTarget("");
+    }
+  }
+
+  async function handleSelectImage(panelId: string, imageId: string) {
+    setLoadingTarget(`select-${imageId}`);
+    setError("");
+
+    try {
+      const result = await selectPanelImage({ storyId, panelId, imageId });
+      setImages(result.images);
+      setImageAssets((currentAssets) =>
+        mergeAssets(currentAssets, result.imageAssets ?? [result.image])
+      );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "候选图选择失败。");
     } finally {
       setLoadingTarget("");
     }
@@ -95,6 +147,22 @@ export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
 
         {pages.length === 32 ? (
           <div className="mt-5 grid gap-3 rounded-lg border border-emerald-100 bg-emerald-50 p-4 sm:grid-cols-3">
+            <button
+              className="min-h-11 rounded-md border border-emerald-700 bg-white px-4 py-2 text-base font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+              disabled={Boolean(loadingTarget)}
+              onClick={() => handleCreateGenerationJob(false)}
+              type="button"
+            >
+              {loadingTarget === "batch" ? "正在生成缺失图像" : "一键生成缺失图像"}
+            </button>
+            <button
+              className="min-h-11 rounded-md border border-emerald-700 bg-white px-4 py-2 text-base font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+              disabled={Boolean(loadingTarget)}
+              onClick={() => handleCreateGenerationJob(true)}
+              type="button"
+            >
+              {loadingTarget === "batch-force" ? "正在生成新候选图" : "一键生成新候选图"}
+            </button>
             <button
               className="min-h-11 rounded-md border border-emerald-700 bg-white px-4 py-2 text-base font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
               disabled={Boolean(loadingTarget)}
@@ -155,6 +223,7 @@ export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
               <div className="grid gap-3 sm:grid-cols-2">
                 {page.panels.map((panel, panelIndex) => {
                   const image = imageByPanelId.get(panel.id);
+                  const candidates = assetsByPanelId.get(panel.id) ?? [];
                   return (
                     <section
                       className="min-h-72 rounded-lg border-2 border-slate-900 bg-white p-2"
@@ -219,6 +288,43 @@ export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
                           ? "正在生成本格"
                           : "生成本格图像"}
                       </button>
+                      <button
+                        className="mt-2 min-h-10 w-full rounded-md border border-slate-700 bg-white px-3 py-2 text-sm font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
+                        disabled={Boolean(loadingTarget)}
+                        onClick={() =>
+                          handleGenerateImages(
+                            { panelId: panel.id, forceNew: true },
+                            `panel-force-${panel.id}`
+                          )
+                        }
+                        type="button"
+                      >
+                        {loadingTarget === `panel-force-${panel.id}`
+                          ? "正在生成候选图"
+                          : "再生成一张候选图"}
+                      </button>
+
+                      {candidates.length > 1 ? (
+                        <div className="mt-3 grid gap-2">
+                          <p className="text-xs font-semibold text-slate-600">
+                            候选图：{candidates.length} 张
+                          </p>
+                          {candidates.map((candidate) => (
+                            <button
+                              className="min-h-9 rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+                              disabled={
+                                Boolean(loadingTarget) || candidate.id === image?.id
+                              }
+                              key={candidate.id}
+                              onClick={() => handleSelectImage(panel.id, candidate.id)}
+                              type="button"
+                            >
+                              {candidate.id === image?.id ? "当前选中" : "选择候选图"}
+                              {candidate.fromCache ? " / 缓存" : ""}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
                     </section>
                   );
                 })}
@@ -237,6 +343,12 @@ function mergeImages(currentImages: ComicImage[], newImages: ComicImage[]) {
   const imageByPanelId = new Map(currentImages.map((image) => [image.panelId, image]));
   newImages.forEach((image) => imageByPanelId.set(image.panelId, image));
   return Array.from(imageByPanelId.values());
+}
+
+function mergeAssets(currentAssets: ComicImage[], newAssets: ComicImage[]) {
+  const imageById = new Map(currentAssets.map((image) => [image.id, image]));
+  newAssets.forEach((image) => imageById.set(image.id, image));
+  return Array.from(imageById.values());
 }
 
 function renderableImageSrc(uri: string) {
