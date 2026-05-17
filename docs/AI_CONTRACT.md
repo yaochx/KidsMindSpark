@@ -43,6 +43,41 @@
    - 不要一次性生成整个项目。
    - 每个 milestone 完成后运行可用测试或静态检查，并更新 README 或对应文档。
 
+9. ImageProvider prompt 构建边界
+   - ImageProvider 可以基于 `story/page/panel` 构建图片 prompt。
+   - ImageProvider 和 prompt builder 不得修改故事、页数、分镜、对白或主线确认状态。
+   - `panel.imagePrompt` 是核心画面描述，但不能作为真实图片 provider 的唯一 prompt 内容长期使用。
+
+10. M11 Panel Prompt Builder 共用约束
+   - M11 必须提供统一 `build_panel_image_prompt(story, page, panel)`。
+   - M11 必须为构建后的 prompt 生成稳定 `promptHash`，供 M12/M13 缓存和候选图管理使用。
+   - OpenAI ImageProvider 和豆包 Seedream ImageProvider 必须共用该 prompt builder。
+   - prompt 必须服务于单格漫画画面，不允许生成整页拼图或完整 32 页。
+   - 默认策略是图片模型生成单格画面和中文漫画对白气泡，应用负责拼页、边框、页码和 PDF。
+   - 对白气泡内只允许写 `dialogue.text`，不得写角色名、冒号、编号或额外旁白。
+   - 说话角色必须通过气泡尾巴、指向线和靠近对应角色的位置表达。
+
+11. M12 Image Asset Cache 与导出约束
+   - 真实生图产物必须保存为可复用 Image Asset，不得只作为一次性临时结果。
+   - 同一 panel 可以保留多张候选图，必须有明确 `selectedImageId`。
+   - 缓存命中时不得重复调用真实文生图 API。
+   - 已选图片必须按 `panelId` 显示在对应分镜框内。
+   - PDF 嵌图不得改变故事、页数、分镜、对白或主线确认状态。
+   - 图片读取接口不得暴露任意本地文件访问。
+   - 图片缺失或读取失败时必须保留占位，不得中断整本导出。
+
+12. M13 批量生成与一键自动化约束
+   - 一键自动化必须受预算限制，不允许无限制消耗 token 或图片额度。
+   - 批量任务必须先查缓存，再为缓存未命中的 panel 调用真实生图。
+   - 批量任务必须支持按 panel 查看状态、失败重试、候选图挑选和单格结果替换。
+   - 用户可以调整单格 prompt 并重生成该 panel，但不得借此改写故事结构。
+   - 批量任务不得绕过 M11 prompt builder。
+
+13. M14 故事优先预算约束
+   - 固定 32 页只能在 M14 通过完整产品约束变更替换，不允许在其他 milestone 顺手放松。
+   - 替换后必须有页数范围、最大 panel 数、单故事生图预算、单批生图预算和单 panel 候选图上限。
+   - 本地 MVP 可使用 `workspaceId=local_default` 和 `projectId` 管理缓存与预算，不要求正式账号系统。
+
 ## Codex 自检清单
 
 - 是否先阅读 `docs/AI_CONTRACT.md`？

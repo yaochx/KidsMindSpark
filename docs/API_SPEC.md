@@ -1,6 +1,6 @@
 # MVP API Spec
 
-所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI 或 DeepSeek StoryProvider；M9 已支持通过后端环境变量切换 OpenAI 或豆包 Seedream ImageProvider。
+所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI 或 DeepSeek StoryProvider；M9 已支持通过后端环境变量切换 OpenAI 或豆包 Seedream ImageProvider。M11 规划使用统一 Panel Prompt Builder 为真实 ImageProvider 构建单格漫画 prompt。
 
 Provider 配置示例：
 
@@ -310,6 +310,44 @@ DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
 - OpenAI ImageProvider 将 base64 图片保存到后端本地 `backend/data/images/` 并写入 `ComicImage.uri`。
 - 豆包 Seedream ImageProvider 支持 `b64_json` 或 `url` 响应；`b64_json` 会保存到后端本地，`url` 会直接写入 `ComicImage.uri`。
 - 生成失败时应记录失败状态，并允许 mock fallback。
+
+### M11 Panel Prompt Builder 行为
+
+- 真实 ImageProvider 应使用统一 `build_panel_image_prompt(story, page, panel)` 构建 prompt。
+- `panel.imagePrompt` 仍是核心画面描述，但不再是唯一 prompt 内容。
+- prompt 必须融合角色设定、页码和分镜号、场景、镜头、动作、中文对白气泡内容、儿童安全约束和单格漫画构图要求。
+- 有对白的 panel 应要求图片模型生成清晰中文漫画对白气泡。
+- 气泡内只允许写 `dialogue.text`，不得写角色名、冒号、编号或额外旁白。
+- 说话角色必须通过气泡尾巴、指向线和靠近对应角色的位置表达；多个气泡应按阅读顺序排列，不能遮挡角色脸部和关键动作。
+- 无对白的 panel 应要求图片模型不要生成文字或对白气泡。
+- prompt builder 不得修改 story、page、panel、对白、页数或主线确认状态。
+
+### M12 真实图片预览与 PDF 嵌图行为
+
+- 真实生图产物应保存为 Image Asset，记录 `storyId`、`panelId`、`provider`、`model`、`size`、`promptHash`、`prompt`、`uri`、`status`、`createdAt`。
+- 同一 panel 可以保留多张候选图，panel 使用 `selectedImageId` 指向最终选择。
+- 相同 `provider + model + size + promptHash + panelId` 命中缓存时，默认复用历史图片，不重复调用真实生图 API。
+- 前端应把 `ComicImage.uri` 渲染为真实图片，而不是只显示 uri 文本。
+- 后端可提供受限图片读取接口，用于读取本地生成图片；接口不得允许任意路径访问。
+- PDF 导出应把已选中图片嵌入对应 panel 分镜框。
+- 缺图、图片读取失败或远程 URL 不可用时，应保留占位和错误状态，不得中断整本 PDF 导出。
+
+### M13 批量生成队列行为
+
+- 可新增批量任务 API，为缺失图片的 panel 创建生成队列。
+- 批量任务必须记录每个 panel 的状态、错误摘要和重试次数。
+- 批量任务必须先查 Image Asset Cache，缓存命中时不得消耗真实生图额度。
+- 一键自动化必须受预算限制，例如单任务最大图片数、最大重试次数和总调用次数。
+- 用户必须能按单个 panel 调整 prompt 并生成新候选图，不需要重跑整本。
+- 用户必须能从候选图中选择某个 panel 的最终图片。
+- 批量任务不得修改故事、页数、分镜、对白或已确认主线。
+
+### M14 故事优先页数与预算行为
+
+- 后续可将固定 32 页升级为 `story_first_bounded` 页数策略。
+- 默认建议页数范围为 16-48 页，每页 1-4 格，单故事最多 96 个 panel。
+- 生图预算应限制单故事最大生成图片数、单批任务最大生成图片数、每个 panel 最大候选图数量。
+- 本地 MVP 可先使用 `workspaceId=local_default` 和 `projectId` 管理故事、缓存、候选图和预算，不引入账号登录。
 
 ## GET /api/export/pdf
 
