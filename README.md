@@ -11,7 +11,7 @@
 1. `docs/AI_CONTRACT.md`
 2. `docs/MILESTONE.md`
 
-当前 M9 包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI / DeepSeek StoryProvider，以及可选 OpenAI ImageProvider。
+当前 M9 包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI / DeepSeek StoryProvider，以及可选 OpenAI / 豆包 Seedream ImageProvider。
 
 ## 前端启动
 
@@ -89,6 +89,7 @@ IMAGE_PROVIDER=mock
 - `STORY_PROVIDER=deepseek` 时后端通过 DeepSeek Chat Completions API 生成故事核心设定、主线和 32 页分镜。
 - `IMAGE_PROVIDER=mock` 当前仍使用 mock 图片记录。
 - `IMAGE_PROVIDER=openai_image` 时后端通过 OpenAI Images API 生成单页或单格漫画图像。
+- `IMAGE_PROVIDER=doubao_seedream` 时后端通过豆包 Seedream 图像生成 API 生成单页或单格漫画图像。
 - 真实图像生成必须指定 `panelId` 或 `pageNumber`，不允许默认一次性生成 32 页全部分镜。
 - API key 只允许放在后端环境变量中，不能写入前端、代码或 Git。
 
@@ -123,6 +124,18 @@ export OPENAI_IMAGE_SIZE=1024x1024
 ```
 
 `OPENAI_IMAGE_MODEL` 和 `OPENAI_IMAGE_SIZE` 可不设置。真实图像会缓存到后端本地 `backend/data/images/`，前端当前优先展示图片记录和状态。
+
+豆包 Seedream ImageProvider 本地配置示例：
+
+```bash
+export IMAGE_PROVIDER=doubao_seedream
+export DOUBAO_SEEDREAM_API_KEY=<your_api_key>
+export DOUBAO_SEEDREAM_MODEL=doubao-seedream-4-0-250828
+export DOUBAO_SEEDREAM_SIZE=1024x1024
+export DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
+```
+
+`DOUBAO_SEEDREAM_MODEL`、`DOUBAO_SEEDREAM_SIZE` 和 `DOUBAO_SEEDREAM_RESPONSE_FORMAT` 可不设置。默认 endpoint 为火山方舟图片生成接口；如果你的控制台给出不同网关，可通过 `DOUBAO_SEEDREAM_ENDPOINT` 覆盖。`b64_json` 响应会缓存到后端本地 `backend/data/images/`，`url` 响应会直接写入图片记录。
 
 ## 后端测试
 
@@ -185,7 +198,7 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 
 ## 真实 API 接入路线
 
-当前应用默认使用 mock provider，不调用真实 GPT、DeepSeek、GLM、MiniMax 或图像生成 API。切换到 `STORY_PROVIDER=openai` 后，故事文本生成会调用 OpenAI API；切换到 `STORY_PROVIDER=deepseek` 后，故事文本生成会调用 DeepSeek API；切换到 `IMAGE_PROVIDER=openai_image` 后，单页或单格图像生成会调用 OpenAI Images API。
+当前应用默认使用 mock provider，不调用真实 GPT、DeepSeek、GLM、MiniMax 或图像生成 API。切换到 `STORY_PROVIDER=openai` 后，故事文本生成会调用 OpenAI API；切换到 `STORY_PROVIDER=deepseek` 后，故事文本生成会调用 DeepSeek API；切换到 `IMAGE_PROVIDER=openai_image` 后，单页或单格图像生成会调用 OpenAI Images API；切换到 `IMAGE_PROVIDER=doubao_seedream` 后，单页或单格图像生成会调用豆包 Seedream 图像生成 API。
 
 后续真实 API 接入按阶段推进：
 
@@ -226,6 +239,16 @@ export IMAGE_PROVIDER=openai_image
 export OPENAI_API_KEY=<your_api_key>
 export OPENAI_IMAGE_MODEL=gpt-image-1
 export OPENAI_IMAGE_SIZE=1024x1024
+```
+
+豆包 Seedream 图像 provider 配置示例：
+
+```bash
+export IMAGE_PROVIDER=doubao_seedream
+export DOUBAO_SEEDREAM_API_KEY=<your_api_key>
+export DOUBAO_SEEDREAM_MODEL=doubao-seedream-4-0-250828
+export DOUBAO_SEEDREAM_SIZE=1024x1024
+export DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
 ```
 
 真实 API key 只能放在后端环境变量中，不能写入前端、代码或 Git。不要使用 ChatGPT Pro、Codex login、浏览器 cookie 或个人 session 作为应用 provider。
