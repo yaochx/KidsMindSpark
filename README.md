@@ -46,6 +46,14 @@ cd frontend
 BACKEND_URL=http://127.0.0.1:5001 npm run dev
 ```
 
+真实文本 provider 生成 32 页脚本可能超过 Next rewrite 代理的默认等待时间。手动验证 DeepSeek 等真实文本生成时，建议在 `frontend/.env.local` 中配置浏览器直连后端：
+
+```text
+NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5001
+```
+
+后端只允许 `http://localhost:3000` 和 `http://127.0.0.1:3000` 的本地 CORS 请求。
+
 ## Provider 配置
 
 默认使用 mock provider，不调用真实模型：

@@ -1,13 +1,13 @@
-import type { ApiErrorResponse } from "@/lib/types/story";
 import type {
   MockImagesRequest,
   MockImagesResponse
 } from "@/lib/types/comic";
+import { apiUrl, readJsonResponse } from "@/lib/api/client";
 
 export async function createMockComicImages(
   payload: MockImagesRequest
 ): Promise<MockImagesResponse> {
-  const response = await fetch("/api/comic/mock-images", {
+  const response = await fetch(apiUrl("/api/comic/mock-images"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -15,12 +15,5 @@ export async function createMockComicImages(
     body: JSON.stringify(payload)
   });
 
-  const data = (await response.json()) as MockImagesResponse | ApiErrorResponse;
-
-  if (!response.ok) {
-    const message = "error" in data ? data.error.message : "漫画预览生成失败。";
-    throw new Error(message);
-  }
-
-  return data as MockImagesResponse;
+  return readJsonResponse<MockImagesResponse>(response, "漫画预览生成失败。");
 }
