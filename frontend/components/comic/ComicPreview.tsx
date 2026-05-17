@@ -23,11 +23,16 @@ const paletteClasses = [
   "from-blue-200 via-indigo-100 to-amber-100"
 ];
 
+const MIN_STORY_PAGES = 16;
+const MAX_STORY_PAGES = 48;
+
 export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
   const [images, setImages] = useState<ComicImage[]>([]);
   const [imageAssets, setImageAssets] = useState<ComicImage[]>([]);
   const [error, setError] = useState("");
   const [loadingTarget, setLoadingTarget] = useState("");
+  const canPreview =
+    pages.length >= MIN_STORY_PAGES && pages.length <= MAX_STORY_PAGES;
 
   const imageByPanelId = useMemo(() => {
     return new Map(images.map((image) => [image.panelId, image]));
@@ -107,13 +112,13 @@ export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
             </p>
             <h2 className="mt-2 text-2xl font-bold text-ink">彩色漫画预览</h2>
             <p className="mt-3 max-w-2xl text-base leading-7 text-slate-700">
-              使用 mock 彩色图像占位展示 32 页漫画结构。后续真实图像生成会替换这些占位图。
+              使用 mock 彩色图像占位展示漫画结构。后续真实图像生成会替换这些占位图。
             </p>
           </div>
 
           <button
             className="min-h-11 rounded-md bg-emerald-700 px-5 py-3 text-base font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-            disabled={pages.length !== 32 || Boolean(loadingTarget)}
+            disabled={!canPreview || Boolean(loadingTarget)}
             onClick={() => handleGenerateImages({}, "all")}
             type="button"
           >
@@ -121,9 +126,9 @@ export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
           </button>
         </div>
 
-        {pages.length !== 32 ? (
+        {!canPreview ? (
           <p className="mt-5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-base text-amber-800">
-            请先生成固定 32 页分镜脚本，再生成漫画预览。
+            请先生成 16-48 页分镜脚本，再生成漫画预览。
           </p>
         ) : null}
 
@@ -135,7 +140,7 @@ export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
 
         <div className="mt-5 grid gap-3 rounded-lg border border-emerald-100 bg-emerald-50 p-4 sm:grid-cols-3">
           <p className="text-base font-semibold text-emerald-900">
-            页数：{pages.length}/32
+            页数：{pages.length} 页
           </p>
           <p className="text-base font-semibold text-emerald-900">
             图片记录：{images.length} 张
@@ -145,7 +150,7 @@ export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
           </p>
         </div>
 
-        {pages.length === 32 ? (
+        {canPreview ? (
           <div className="mt-5 grid gap-3 rounded-lg border border-emerald-100 bg-emerald-50 p-4 sm:grid-cols-3">
             <button
               className="min-h-11 rounded-md border border-emerald-700 bg-white px-4 py-2 text-base font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400"
@@ -182,7 +187,7 @@ export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
               {loadingTarget === "first-panel" ? "正在生成第 1 格" : "生成第 1 格图像"}
             </button>
             <p className="text-sm leading-6 text-emerald-900">
-              真实图像 provider 下请优先单页或单格生成，避免一次性生成全部 32 页。
+              真实图像 provider 下请优先批量缺失图、单页或单格生成，避免一次性生成整本故事。
             </p>
           </div>
         ) : null}

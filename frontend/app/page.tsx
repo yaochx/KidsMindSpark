@@ -4,7 +4,7 @@ const milestones = [
   "M0 项目初始化",
   "M1 故事输入页",
   "M2 主线确认页",
-  "M3 32 页分镜脚本页",
+  "M3 漫画分镜脚本页",
   "M4 彩色漫画预览页",
   "M5 PDF 导出",
   "M6 优化与测试"
@@ -20,7 +20,7 @@ export default function HomePage() {
             儿童中式/日式彩色漫画故事生成 MVP
           </h1>
           <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-700">
-            先输入故事概念，确认图形化故事主线，生成固定 32 页分镜脚本，再用 mock 图片展示彩色漫画预览，最后导出 A4 PDF 预览。
+            先输入故事概念，确认图形化故事主线，生成 16-48 页分镜脚本，再用 mock 图片展示彩色漫画预览，最后导出 A4 PDF 预览。
           </p>
         </header>
 

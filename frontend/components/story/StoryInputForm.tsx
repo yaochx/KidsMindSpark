@@ -157,7 +157,7 @@ export function StoryInputForm() {
           <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-xl font-semibold text-ink">M5 范围</h2>
             <p className="mt-3 text-base leading-7 text-slate-700">
-              本阶段可以生成固定 32 页分镜脚本、彩色 mock 漫画预览，并导出 A4 PDF 预览。
+              本阶段可以生成 16-48 页分镜脚本、彩色 mock 漫画预览，并导出 A4 PDF 预览。
             </p>
           </section>
 

@@ -31,7 +31,7 @@ export type StoryScriptRequest = {
 
 export type StoryScriptResponse = {
   storyId: string;
-  pageCount: 32;
+  pageCount: number;
   pages: ScriptPage[];
   status: "script_generated";
 };

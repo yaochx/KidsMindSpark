@@ -7,6 +7,8 @@ MVP 使用本地 JSON 保存。字段命名建议在前后端保持一致。
 ```ts
 type Story = {
   id: string;
+  workspaceId: "local_default";
+  projectId: string;
   title: string;
   concept: string;
   safeConcept: string;
@@ -17,7 +19,24 @@ type Story = {
   timeline: TimelineNode[];
   pages: ScriptPage[];
   images: ComicImage[];
+  imageAssets: ComicImage[];
+  generationJobs: GenerationJob[];
   exportJobs: ExportJob[];
+  pagePolicy: {
+    mode: "story_first_bounded";
+    minPages: 16;
+    maxPages: 48;
+    maxPanels: 96;
+    panelsPerPage: {
+      min: 1;
+      max: 4;
+    };
+  };
+  imageBudget: {
+    maxImagesPerStory: 96;
+    maxImagesPerBatch: 24;
+    maxVariantsPerPanel: 4;
+  };
   createdAt: string;
   updatedAt: string;
 };
@@ -106,6 +125,30 @@ type ComicImage = {
 };
 ```
 
+## GenerationJob
+
+```ts
+type GenerationJob = {
+  id: string;
+  storyId: string;
+  status: "pending" | "running" | "completed" | "failed";
+  budget: {
+    maxImages: number;
+    maxRetriesPerPanel: number;
+  };
+  items: {
+    panelId: string;
+    status: "pending" | "generated" | "failed";
+    imageId?: string;
+    fromCache?: boolean;
+    retryCount: number;
+    error?: string;
+  }[];
+  createdAt: string;
+  completedAt?: string;
+};
+```
+
 ## ExportJob
 
 ```ts
@@ -128,12 +171,29 @@ type ExportJob = {
 ```json
 {
   "id": "story_cat_adventure_001",
+  "workspaceId": "local_default",
+  "projectId": "project_cat_adventure_001",
   "title": "三只小猫的森林桃源",
   "concept": "三只小猫老大老二老三，拿着猎枪去森林流浪冒险，遇到刺猬、眼珠和奇怪动物，最后发现一座世外桃源。",
   "safeConcept": "三只小猫老大、老二、老三，带着木头探险杖去森林冒险，遇到刺猬、会眨眼的神秘果实和奇怪动物，最后发现一座世外桃源。",
   "targetAge": "小学 1-4 年级",
   "visualStyle": "mixed_east_asian_color_comic",
   "status": "preview_generated",
+  "pagePolicy": {
+    "mode": "story_first_bounded",
+    "minPages": 16,
+    "maxPages": 48,
+    "maxPanels": 96,
+    "panelsPerPage": {
+      "min": 1,
+      "max": 4
+    }
+  },
+  "imageBudget": {
+    "maxImagesPerStory": 96,
+    "maxImagesPerBatch": 24,
+    "maxVariantsPerPanel": 4
+  },
   "characters": [
     {
       "id": "char_cat_big",
@@ -396,4 +456,4 @@ type ExportJob = {
 }
 ```
 
-说明：完整运行时 `pages` 必须包含 1-32 全部页面。上方示例为文档可读性展示第 1 页和第 32 页，实际数据不得省略中间页。
+说明：M14 后完整运行时 `pages` 必须包含 16-48 页连续页面，单故事最多 96 个分镜。上方示例为文档可读性展示部分页面，实际数据不得省略中间页。旧的 32 页故事仍然合法。

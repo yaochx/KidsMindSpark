@@ -2,7 +2,7 @@
 
 儿童中式/日式彩色漫画故事生成 MVP。
 
-当前进度：M13 批量生成队列、一键自动化与候选图挑选。
+当前进度：M14 故事优先页数与本地项目/预算模型。
 
 ## 开发约束
 
@@ -11,7 +11,7 @@
 1. `docs/AI_CONTRACT.md`
 2. `docs/MILESTONE.md`
 
-当前已包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI / DeepSeek StoryProvider、可选 OpenAI / 豆包 Seedream ImageProvider、统一 Panel Prompt Builder、真实图片缓存、预览和 PDF 嵌图能力，以及受预算限制的批量生成队列。
+当前已包含结构化故事输入页、图形化故事主线确认、16-48 页故事优先分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试、可选 OpenAI / DeepSeek StoryProvider、可选 OpenAI / 豆包 Seedream ImageProvider、统一 Panel Prompt Builder、真实图片缓存、预览和 PDF 嵌图能力、受预算限制的批量生成队列，以及本地项目/预算模型。
 
 ## 前端启动
 
@@ -46,7 +46,7 @@ cd frontend
 BACKEND_URL=http://127.0.0.1:5001 npm run dev
 ```
 
-真实文本 provider 生成 32 页脚本可能超过 Next rewrite 代理的默认等待时间。手动验证 DeepSeek 等真实文本生成时，建议在 `frontend/.env.local` 中配置浏览器直连后端：
+真实文本 provider 生成长篇分镜脚本可能超过 Next rewrite 代理的默认等待时间。手动验证 DeepSeek 等真实文本生成时，建议在 `frontend/.env.local` 中配置浏览器直连后端：
 
 ```text
 NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:5001
@@ -82,15 +82,15 @@ IMAGE_PROVIDER=mock
 
 说明：
 
-- `StoryProvider` 负责故事核心设定、主线、32 页脚本和 `imagePrompt`。
+- `StoryProvider` 负责故事核心设定、主线、16-48 页脚本和 `imagePrompt`。
 - `ImageProvider` 负责根据 `imagePrompt` 生成或返回图片记录。
 - `STORY_PROVIDER=mock` 时仍使用本地 mock，不调用真实模型。
-- `STORY_PROVIDER=openai` 时后端通过 OpenAI Responses API 生成故事核心设定、主线和 32 页分镜。
-- `STORY_PROVIDER=deepseek` 时后端通过 DeepSeek Chat Completions API 生成故事核心设定、主线和 32 页分镜。
+- `STORY_PROVIDER=openai` 时后端通过 OpenAI Responses API 生成故事核心设定、主线和 16-48 页分镜。
+- `STORY_PROVIDER=deepseek` 时后端通过 DeepSeek Chat Completions API 生成故事核心设定、主线和 16-48 页分镜。
 - `IMAGE_PROVIDER=mock` 当前仍使用 mock 图片记录。
 - `IMAGE_PROVIDER=openai_image` 时后端通过 OpenAI Images API 生成单页或单格漫画图像。
 - `IMAGE_PROVIDER=doubao_seedream` 时后端通过豆包 Seedream 图像生成 API 生成单页或单格漫画图像。
-- 真实图像生成必须指定 `panelId` 或 `pageNumber`，不允许默认一次性生成 32 页全部分镜。
+- 真实图像生成必须指定 `panelId` 或 `pageNumber`，不允许默认一次性生成整本故事全部分镜。
 - API key 只允许放在后端环境变量中，不能写入前端、代码或 Git。
 
 OpenAI StoryProvider 本地配置示例：
@@ -162,7 +162,7 @@ POST http://localhost:5000/api/story/timeline
 PUT http://localhost:5000/api/story/timeline
 ```
 
-32 页分镜脚本 mock：
+漫画分镜脚本 mock：
 
 ```text
 POST http://localhost:5000/api/story/script
@@ -180,14 +180,14 @@ A4 PDF 预览导出：
 GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pdf
 ```
 
-说明：MVP 阶段导出 A4 PDF 预览，PDF 内包含 32 页漫画结构、分镜框、mock 图像占位、旁白、对白和页码。后续可在 M6 之后继续适配 32 开精确打印尺寸与出血边距。
+说明：MVP 阶段导出 A4 PDF 预览，PDF 内包含漫画结构、分镜框、mock 图像占位、旁白、对白和页码。后续可在 M6 之后继续适配 32 开精确打印尺寸与出血边距。
 
 ## 里程碑
 
 - M0 项目初始化：已完成。
 - M1 故事输入页：已完成。
 - M2 主线确认页：已完成。
-- M3 32 页分镜脚本页：已完成。
+- M3 漫画分镜脚本页：已完成。
 - M4 彩色漫画预览页：已完成。
 - M5 PDF 导出：已完成。
 - M6 优化与测试：已完成。
@@ -198,7 +198,7 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 - M11 Panel Prompt Builder：已完成。
 - M12 Image Asset Cache 与真实图片预览/PDF 嵌图：已完成。
 - M13 批量生成队列、一键自动化与候选图挑选：已完成。
-- M14 故事优先页数与本地项目/预算模型：规划中。
+- M14 故事优先页数与本地项目/预算模型：已完成。
 
 ## 真实 API 接入路线
 
@@ -207,7 +207,7 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 后续真实 API 接入按阶段推进：
 
 1. M7: 拆分 `StoryProvider` 和 `ImageProvider`，默认仍使用 mock。
-2. M8: 接入一个真实文本 provider，用于故事、主线、32 页脚本和 `imagePrompt`。
+2. M8: 接入一个真实文本 provider，用于故事、主线、漫画脚本和 `imagePrompt`。
 3. M9: 接入一个真实图像 provider，优先支持单 panel 或单页生成。
 4. M10: 补齐 fallback、缓存、错误处理、调用次数限制和测试。
 5. M11: 新增 `build_panel_image_prompt(story, page, panel)` 和 `promptHash`，不再让真实 ImageProvider 直接原样消费 `panel.imagePrompt`，而是用结构化 `story/page/panel` 构建完整单格漫画 prompt。
@@ -217,7 +217,7 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 
 M11 的 prompt builder 会融合角色设定、页码和分镜号、场景、镜头、动作、`panel.imagePrompt`、中文对白气泡内容、儿童安全约束和单格漫画构图要求，并为 prompt 生成稳定 `promptHash`。默认策略是让豆包 Seedream 等图片模型生成单格画面和中文漫画对白气泡；应用继续负责拼页、边框、页码和 PDF。对白气泡内只允许写 `dialogue.text`，不得写角色名、冒号或编号；说话角色必须通过气泡尾巴、指向线和靠近对应角色的位置表达。
 
-M12/M13 的目标是把“单格图片生成”变成可缓存、可挑选、可重试、可导出的漫画制作流程：先保存历史产物和候选图，再做一键批量队列。当前文档仍保留固定 32 页 MVP 约束；M14 会把固定页数替换为故事表达优先的 bounded 模式，例如页数 16-48、最多 96 个 panel、每次批量最多生成 12-24 张图片。
+M12/M13 的目标是把“单格图片生成”变成可缓存、可挑选、可重试、可导出的漫画制作流程：先保存历史产物和候选图，再做一键批量队列。M14 已把固定页数替换为故事表达优先的 bounded 模式：页数 16-48、最多 96 个 panel、每次批量最多生成 24 张图片、单个 panel 最多保留 4 个候选版本。本地 MVP 使用 `workspaceId=local_default` 和 `projectId` 管理故事、缓存和预算，不引入正式账号登录。
 
 本地 provider 配置示例：
 

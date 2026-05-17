@@ -160,13 +160,13 @@ DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
 ### Mock 行为
 
 - 生成固定 9 类主线节点：开场、主角、目标、伙伴、阻碍、转折、危机、解决、结局。
-- 不生成 32 页分镜。
+- 不生成漫画分镜。
 
 ### M8 真实 StoryProvider 行为
 
 - 可由真实文本 provider 生成 9 类主线节点。
 - 缺少必需节点、顺序非法或节点过长时必须返回错误。
-- 用户确认前仍不得生成 32 页分镜。
+- 用户确认前仍不得生成漫画分镜。
 
 ## PUT /api/story/timeline
 
@@ -226,7 +226,7 @@ DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
 ```json
 {
   "storyId": "story_cat_adventure_001",
-  "pageCount": 32,
+  "pageCount": 24,
   "pages": [
     {
       "pageNumber": 1,
@@ -243,19 +243,20 @@ DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
 
 - `STORY_NOT_FOUND`: 找不到 storyId。
 - `TIMELINE_NOT_CONFIRMED`: 主线尚未确认。
-- `SCRIPT_CONSTRAINT_FAILED`: 未满足 32 页或每页 1-4 分镜约束。
+- `SCRIPT_CONSTRAINT_FAILED`: 未满足 16-48 页、每页 1-4 分镜、最多 96 个分镜或短对白约束。
 
 ### Mock 行为
 
-- 必须生成正好 32 个 `ScriptPage`。
+- 必须生成 16-48 个 `ScriptPage`。
 - 每页生成 1-4 个 `Panel`。
 - 每页对白保持短句。
+- 单故事最多 96 个 panel。
 
 ### M8 真实 StoryProvider 行为
 
-- 可由真实文本 provider 生成 32 页分镜脚本。
+- 可由真实文本 provider 生成 16-48 页分镜脚本。
 - 每个 panel 必须包含可供图像 provider 使用的 `imagePrompt`。
-- 不满足 32 页、1-4 分镜或短对白约束时必须拒绝落库。
+- 不满足 16-48 页、1-4 分镜、最多 96 个分镜或短对白约束时必须拒绝落库。
 
 ## POST /api/comic/mock-images
 
@@ -290,7 +291,7 @@ DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
 ### Error
 
 - `STORY_NOT_FOUND`: 找不到 storyId。
-- `SCRIPT_REQUIRED`: 尚未生成 32 页分镜。
+- `SCRIPT_REQUIRED`: 尚未生成漫画分镜。
 - `IMAGE_TARGET_REQUIRED`: 真实图像 provider 未指定 `panelId` 或 `pageNumber`。
 - `IMAGE_PROMPT_REQUIRED`: 目标分镜缺少 `imagePrompt`。
 - `PROVIDER_CALL_FAILED`: 真实图像 provider 请求失败。
@@ -305,7 +306,7 @@ DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
 
 - 可由真实图像 provider 根据 `Panel.imagePrompt` 生成图片。
 - 当前支持单 panel 或单页生成。
-- 不默认一次性生成完整 32 页全部分镜。
+- 不默认一次性生成整本故事全部分镜。
 - 图像 provider 不得修改故事、页数、分镜和对白结构。
 - OpenAI ImageProvider 将 base64 图片保存到后端本地 `backend/data/images/` 并写入 `ComicImage.uri`。
 - 豆包 Seedream ImageProvider 支持 `b64_json` 或 `url` 响应；`b64_json` 会保存到后端本地，`url` 会直接写入 `ComicImage.uri`。
@@ -413,7 +414,7 @@ DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
 
 ### M14 故事优先页数与预算行为
 
-- 后续可将固定 32 页升级为 `story_first_bounded` 页数策略。
+- 已将固定 32 页升级为 `story_first_bounded` 页数策略。
 - 默认建议页数范围为 16-48 页，每页 1-4 格，单故事最多 96 个 panel。
 - 生图预算应限制单故事最大生成图片数、单批任务最大生成图片数、每个 panel 最大候选图数量。
 - 本地 MVP 可先使用 `workspaceId=local_default` 和 `projectId` 管理故事、缓存、候选图和预算，不引入账号登录。
@@ -472,6 +473,6 @@ Query:
 
 ### Mock 行为
 
-- 基于 32 页漫画预览结构生成 A4 预览 PDF。
+- 基于漫画预览结构生成 A4 预览 PDF。
 - 不允许只输出纯文本故事。
 - 记录 `ExportJob`。

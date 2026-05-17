@@ -38,7 +38,7 @@ export function PdfExportPanel({ storyId, canExport }: PdfExportPanelProps) {
           <p className="text-sm font-semibold text-slate-700">M5 PDF 导出</p>
           <h2 className="mt-2 text-2xl font-bold text-ink">A4 PDF 预览</h2>
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-700">
-            导出包含 32 页漫画结构、分镜框、mock 图像占位、旁白和对白的 A4 预览 PDF。后续可升级为 32 开精确打印。
+            导出包含漫画结构、分镜框、mock 图像占位、旁白和对白的 A4 预览 PDF。后续可升级为 32 开精确打印。
           </p>
         </div>
 

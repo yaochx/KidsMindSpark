@@ -6,6 +6,12 @@ from typing import Any
 from ..providers.config import get_story_provider
 from ..providers.errors import ProviderError
 from ..storage.json_store import load_story, save_story
+from .page_policy import (
+    MAX_STORY_PANELS,
+    MAX_STORY_PAGES,
+    MIN_STORY_PAGES,
+    page_count_in_range,
+)
 
 
 class ScriptError(ValueError):
@@ -41,28 +47,37 @@ def generate_story_script(payload: dict[str, Any]) -> dict[str, Any]:
     _validate_script_pages(pages)
 
     story["pages"] = pages
+    story["pagePolicy"] = {
+        "mode": "story_first_bounded",
+        "minPages": MIN_STORY_PAGES,
+        "maxPages": MAX_STORY_PAGES,
+        "maxPanels": MAX_STORY_PANELS,
+        "panelsPerPage": {"min": 1, "max": 4},
+    }
     story["status"] = "script_generated"
     story["updatedAt"] = datetime.now(timezone.utc).isoformat()
     save_story(story_id, story)
 
     return {
         "storyId": story_id,
-        "pageCount": 32,
+        "pageCount": len(pages),
         "pages": pages,
         "status": "script_generated",
     }
 
 
 def _validate_script_pages(pages: list[dict[str, Any]]) -> None:
-    if len(pages) != 32:
+    if not page_count_in_range(len(pages)):
         raise ScriptError(
             "SCRIPT_CONSTRAINT_FAILED",
-            "分镜脚本必须正好 32 页。",
+            "分镜脚本页数必须在 16-48 页之间。",
             {"pageCount": str(len(pages))},
         )
 
+    panel_total = 0
     for page in pages:
         panels = page.get("panels", [])
+        panel_total += len(panels)
         if not 1 <= len(panels) <= 4:
             raise ScriptError(
                 "SCRIPT_CONSTRAINT_FAILED",
@@ -77,3 +92,9 @@ def _validate_script_pages(pages: list[dict[str, Any]]) -> None:
                         "每条对白必须保持短句。",
                         {"panelId": str(panel.get("id"))},
                     )
+    if panel_total > MAX_STORY_PANELS:
+        raise ScriptError(
+            "SCRIPT_CONSTRAINT_FAILED",
+            "单个故事最多允许 96 个分镜。",
+            {"panelCount": str(panel_total)},
+        )

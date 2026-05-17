@@ -22,6 +22,8 @@ export type Character = {
 
 export type StoryOutlineResponse = {
   storyId: string;
+  workspaceId?: string;
+  projectId?: string;
   title: string;
   safeConcept: string;
   characters: Character[];
