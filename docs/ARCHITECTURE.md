@@ -6,7 +6,7 @@
 - UI: shadcn/ui，可选 React Flow
 - backend: Flask + Python 3.11
 - data: 本地 JSON 文件
-- AI: mock provider；M7 后拆分为 StoryProvider 与 ImageProvider；M11 规划加入 Panel Prompt Builder
+- AI: mock provider；M7 后拆分为 StoryProvider 与 ImageProvider；M11 已加入 Panel Prompt Builder
 - PDF: 前期可用浏览器打印或后端 PDF 库
 
 ## 架构原则

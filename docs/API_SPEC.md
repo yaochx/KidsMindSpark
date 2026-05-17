@@ -1,6 +1,6 @@
 # MVP API Spec
 
-所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI 或 DeepSeek StoryProvider；M9 已支持通过后端环境变量切换 OpenAI 或豆包 Seedream ImageProvider。M11 规划使用统一 Panel Prompt Builder 为真实 ImageProvider 构建单格漫画 prompt。
+所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI 或 DeepSeek StoryProvider；M9 已支持通过后端环境变量切换 OpenAI 或豆包 Seedream ImageProvider。M11 已支持使用统一 Panel Prompt Builder 为真实 ImageProvider 构建单格漫画 prompt。
 
 Provider 配置示例：
 

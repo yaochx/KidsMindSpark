@@ -11,6 +11,10 @@ from unittest.mock import patch
 
 from backend.app.config.env_loader import load_dotenv
 from backend.app.providers.errors import ProviderResponseError
+from backend.app.providers.image.prompt_builder import (
+    build_panel_image_prompt,
+    build_panel_prompt_hash,
+)
 from backend.app.providers.story.deepseek_story_provider import DeepSeekStoryProvider
 from backend.app.providers.story.openai_story_provider import OpenAIStoryProvider
 
@@ -269,6 +273,87 @@ class MvpFlowTest(unittest.TestCase):
                         "story_test",
                     )
 
+    def test_panel_prompt_builder_includes_structure_and_dialogue_rules(self) -> None:
+        story = {
+            "title": "三只小猫的森林桃源",
+            "characters": [
+                {
+                    "id": "cat_eldest",
+                    "name": "老大",
+                    "role": "主角",
+                    "description": "稳重的橘色小猫。",
+                    "visualPrompt": "orange kitten with red scarf",
+                }
+            ],
+        }
+        page = {
+            "pageNumber": 1,
+            "title": "森林的邀请",
+            "storyBeat": "三只小猫发现发光树叶地图。",
+        }
+        panel = {
+            "id": "panel_001_01",
+            "panelNumber": 1,
+            "shotType": "medium",
+            "sceneDescription": "森林入口，树叶地图发光。",
+            "characters": ["老大"],
+            "narration": "老大举起木头探险杖。",
+            "dialogue": [{"characterId": "老大", "text": "我们出发吧！"}],
+            "imagePrompt": "three kittens at a glowing forest entrance",
+        }
+
+        prompt = build_panel_image_prompt(story, page, panel)
+        prompt_hash = build_panel_prompt_hash(prompt)
+
+        self.assertIn("你正在生成一张儿童彩色漫画单格画面", prompt)
+        self.assertIn("第 1 页", prompt)
+        self.assertIn("第 1 格", prompt)
+        self.assertIn("森林入口，树叶地图发光。", prompt)
+        self.assertIn("three kittens at a glowing forest entrance", prompt)
+        self.assertIn("orange kitten with red scarf", prompt)
+        self.assertIn("气泡内只允许写对白文本", prompt)
+        self.assertIn("气泡 1 靠近或尾巴指向 老大", prompt)
+        self.assertIn("气泡内只写：我们出发吧！", prompt)
+        self.assertNotIn("老大：我们出发吧！", prompt)
+        self.assertEqual(len(prompt_hash), 64)
+
+    def test_panel_prompt_builder_disables_text_without_dialogue(self) -> None:
+        prompt = build_panel_image_prompt(
+            {"title": "无对白测试"},
+            {"pageNumber": 2, "title": "安静森林", "storyBeat": "大家安静观察。"},
+            {
+                "id": "panel_002_01",
+                "panelNumber": 1,
+                "shotType": "wide",
+                "sceneDescription": "安静森林。",
+                "characters": ["主角小队"],
+                "dialogue": [],
+                "imagePrompt": "quiet forest in colorful children's comic style",
+            },
+        )
+
+        self.assertIn("本格无对白", prompt)
+        self.assertIn("不要生成任何文字", prompt)
+        self.assertIn("不要生成对白气泡", prompt)
+
+    def test_panel_prompt_builder_requires_image_prompt(self) -> None:
+        with self.assertRaises(ProviderResponseError) as raised:
+            build_panel_image_prompt(
+                {"title": "缺少提示词"},
+                {"pageNumber": 1, "title": "第一页", "storyBeat": "测试"},
+                {
+                    "id": "panel_missing_prompt",
+                    "panelNumber": 1,
+                    "shotType": "medium",
+                    "sceneDescription": "测试场景。",
+                    "characters": [],
+                    "dialogue": [],
+                    "imagePrompt": "",
+                },
+            )
+
+        self.assertEqual(raised.exception.code, "IMAGE_PROMPT_REQUIRED")
+
     def test_unknown_image_provider_returns_clear_error(self) -> None:
         story_id = self._create_outline()
         timeline = self._create_timeline(story_id)
@@ -341,7 +426,46 @@ class MvpFlowTest(unittest.TestCase):
         self.assertEqual(image["provider"], "openai_image")
         self.assertEqual(image["status"], "generated")
         self.assertEqual(image["panelId"], "panel_001_01")
+        self.assertEqual(len(image["promptHash"]), 64)
+        self.assertIn("对白气泡", image["prompt"])
+        self.assertIn("气泡内只写：我们一起想办法。", image["prompt"])
         self.assertTrue(Path(image["uri"]).exists())
+
+    def test_openai_image_provider_sends_structured_panel_prompt(self) -> None:
+        story_id = self._create_ready_script()
+        captured_prompts: list[str] = []
+        api_response = {
+            "data": [
+                {
+                    "b64_json": b64encode(b"fake-png-bytes").decode("ascii"),
+                }
+            ]
+        }
+
+        def fake_urlopen(request, timeout):
+            captured_prompts.append(json.loads(request.data.decode("utf-8"))["prompt"])
+            return _FakeOpenAIResponse(api_response)
+
+        with patch.dict(
+            os.environ,
+            {"IMAGE_PROVIDER": "openai_image", "OPENAI_API_KEY": "test-key"},
+            clear=True,
+        ):
+            with patch(
+                "backend.app.providers.image.openai_image_provider.urllib.request.urlopen",
+                side_effect=fake_urlopen,
+            ):
+                response = self.client.post(
+                    "/api/comic/mock-images",
+                    json={"storyId": story_id, "panelId": "panel_001_01"},
+                )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(len(captured_prompts), 1)
+        self.assertIn("你正在生成一张儿童彩色漫画单格画面", captured_prompts[0])
+        self.assertIn("气泡内只允许写对白文本", captured_prompts[0])
+        self.assertIn("气泡内只写：我们一起想办法。", captured_prompts[0])
+        self.assertNotIn("老大：我们一起想办法。", captured_prompts[0])
 
     def test_doubao_seedream_image_provider_requires_api_key(self) -> None:
         story_id = self._create_ready_script()
@@ -412,7 +536,44 @@ class MvpFlowTest(unittest.TestCase):
         self.assertEqual(image["provider"], "doubao_seedream")
         self.assertEqual(image["status"], "generated")
         self.assertEqual(image["panelId"], "panel_001_01")
+        self.assertEqual(len(image["promptHash"]), 64)
+        self.assertIn("对白气泡", image["prompt"])
         self.assertTrue(Path(image["uri"]).exists())
+
+    def test_doubao_seedream_provider_sends_structured_panel_prompt(self) -> None:
+        story_id = self._create_ready_script()
+        captured_prompts: list[str] = []
+        api_response = {"data": [{"url": "https://example.test/panel.png"}]}
+
+        def fake_urlopen(request, timeout):
+            captured_prompts.append(json.loads(request.data.decode("utf-8"))["prompt"])
+            return _FakeOpenAIResponse(api_response)
+
+        with patch.dict(
+            os.environ,
+            {
+                "IMAGE_PROVIDER": "doubao_seedream",
+                "DOUBAO_SEEDREAM_API_KEY": "test-key",
+                "DOUBAO_SEEDREAM_RESPONSE_FORMAT": "url",
+            },
+            clear=True,
+        ):
+            with patch(
+                (
+                    "backend.app.providers.image.doubao_seedream_image_provider."
+                    "urllib.request.urlopen"
+                ),
+                side_effect=fake_urlopen,
+            ):
+                response = self.client.post(
+                    "/api/comic/mock-images",
+                    json={"storyId": story_id, "panelId": "panel_001_01"},
+                )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(len(captured_prompts), 1)
+        self.assertIn("只生成一个单格漫画画面", captured_prompts[0])
+        self.assertIn("气泡内只写：我们一起想办法。", captured_prompts[0])
 
     def test_doubao_seedream_image_provider_accepts_url_response(self) -> None:
         story_id = self._create_ready_script()

@@ -9,7 +9,8 @@ from typing import Any
 from ...storage.image_store import save_base64_png
 from ..errors import ProviderCallError, ProviderConfigError, ProviderResponseError
 from .base import ImageGenerationTarget
-from .openai_image_provider import _panel_prompt, _select_panels
+from .openai_image_provider import _select_panels
+from .prompt_builder import build_panel_image_prompt, build_panel_prompt_hash
 
 DOUBAO_SEEDREAM_IMAGES_URL = "https://ark.cn-beijing.volces.com/api/v3/images/generations"
 DEFAULT_DOUBAO_SEEDREAM_MODEL = "doubao-seedream-4-0-250828"
@@ -58,7 +59,8 @@ class DoubaoSeedreamImageProvider:
         width, height = _image_dimensions(self.size)
         for page, panel in panel_items:
             image_id = f"img_{panel['id']}"
-            prompt = _panel_prompt(story, page, panel)
+            prompt = build_panel_image_prompt(story, page, panel)
+            prompt_hash = build_panel_prompt_hash(prompt)
             try:
                 image_uri = self._generate_image(image_id, prompt)
                 status = "generated"
@@ -76,6 +78,7 @@ class DoubaoSeedreamImageProvider:
                 "status": status,
                 "uri": image_uri,
                 "prompt": prompt,
+                "promptHash": prompt_hash,
                 "width": width,
                 "height": height,
                 "style": story.get("visualStyle", "mixed_east_asian_color_comic"),
