@@ -8,14 +8,14 @@
 2. 修改前先确认当前目标是否符合 `docs/AI_CONTRACT.md` 的硬约束。
 3. 修改后运行当前阶段可用的测试、编译或静态检查。
 4. 若行为、启动方式或阶段状态发生变化，必须同步更新 `README.md` 或对应文档。
-5. 一个 PR / MR 只承载一个明确目标，优先对应一个 milestone 或一个独立修复。
+5. 一个 PR 只承载一个明确目标，优先对应一个 milestone 或一个独立修复。
 
 ## 分支模型
 
 1. 主干分支为保护分支：`main` 或 `master`。
 2. 禁止直接在 `main` 或 `master` 上开发并直接 push。
 3. 所有业务开发、修复、发布准备必须从保护分支拉出短生命周期分支。
-4. 分支完成后只能通过 PR / MR 合并回保护分支。
+4. 分支完成后只能通过 GitHub PR 合并回保护分支。
 5. 分支内容必须聚焦单一目标，不得把多个无关改动混在同一分支。
 
 ## 分支命名规范
@@ -162,16 +162,17 @@ Review: required
 4. 如果为了完成同一个 milestone 必须改多个模块，body 中逐条说明每个修改点。
 5. 若发现提交混入无关改动，必须在合并前拆分或重做提交。
 
-## PR / MR 合并策略
+## GitHub PR 合并策略
 
 1. `main` 和 `master` 是保护分支，禁止直接 push。
-2. 只允许通过 PR / MR 合并到保护分支。
-3. PR / MR 必须说明目标、影响范围、验证结果和对应 milestone。
-4. PR / MR 必须经过至少 1 名 reviewer 审核。
-5. 合并前必须通过当前仓库可用的检查，例如后端编译、路由检查、前端 lint、单元测试或文档检查。
-6. 默认使用 Squash Merge 合并，最终 squash commit 也必须符合本文件的 commit message 规范。
-7. 禁止把多个无关改动混入同一个 PR / MR。
-8. 禁止为省事跳过 review、检查、body 或 footer。
+2. 本项目使用 GitHub，合并请求统一称为 PR；GitLab 中的 MR 仅作为概念等价物，不作为本仓库执行口径。
+3. 只允许通过 GitHub PR 合并到保护分支。
+4. PR 必须说明目标、影响范围、验证结果和对应 milestone。
+5. PR 必须经过至少 1 名 reviewer 审核。
+6. 合并前必须通过当前仓库可用的检查，例如后端编译、路由检查、前端 lint、单元测试或文档检查。
+7. 默认使用 Squash Merge 合并，最终 squash commit 也必须符合本文件的 commit message 规范。
+8. 禁止把多个无关改动混入同一个 PR。
+9. 禁止为省事跳过 review、检查、body 或 footer。
 
 ## 常见不规范行为限制
 
@@ -183,7 +184,7 @@ Review: required
 4. 为了省事跳过 commit body 或 footer。
 5. 直接 push 到 `main` 或 `master`。
 6. 在提交信息里使用伪换行，或提交格式不完整的 message。
-7. 绕过 PR / MR 合并策略。
+7. 绕过 GitHub PR 合并策略。
 8. 在当前 milestone 中提前实现后续 milestone 的功能。
 
 ## 提交前自检
@@ -195,4 +196,4 @@ Review: required
 3. 本次提交是单提交单意图。
 4. 没有直接在保护分支上开发并 push。
 5. 没有混入与当前 milestone 或当前修复无关的文件。
-6. 已运行当前阶段可用检查，并在 PR / MR 中记录结果。
+6. 已运行当前阶段可用检查，并在 PR 中记录结果。
