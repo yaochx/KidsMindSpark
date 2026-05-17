@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import unittest
+from base64 import b64encode
 from pathlib import Path
 from unittest.mock import patch
 
@@ -179,6 +180,68 @@ class MvpFlowTest(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.get_json()["error"]["code"], "PROVIDER_CONFIG_ERROR")
 
+    def test_openai_image_provider_requires_api_key(self) -> None:
+        story_id = self._create_ready_script()
+
+        with patch.dict(
+            os.environ,
+            {"IMAGE_PROVIDER": "openai_image"},
+            clear=True,
+        ):
+            response = self.client.post(
+                "/api/comic/mock-images",
+                json={"storyId": story_id, "panelId": "panel_001_01"},
+            )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"]["code"], "PROVIDER_CONFIG_ERROR")
+
+    def test_openai_image_provider_requires_target(self) -> None:
+        story_id = self._create_ready_script()
+
+        with patch.dict(
+            os.environ,
+            {"IMAGE_PROVIDER": "openai_image", "OPENAI_API_KEY": "test-key"},
+            clear=True,
+        ):
+            response = self.client.post("/api/comic/mock-images", json={"storyId": story_id})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.get_json()["error"]["code"], "IMAGE_TARGET_REQUIRED")
+
+    def test_openai_image_provider_generates_single_panel(self) -> None:
+        story_id = self._create_ready_script()
+        api_response = {
+            "data": [
+                {
+                    "b64_json": b64encode(b"fake-png-bytes").decode("ascii"),
+                }
+            ]
+        }
+
+        with patch.dict(
+            os.environ,
+            {"IMAGE_PROVIDER": "openai_image", "OPENAI_API_KEY": "test-key"},
+            clear=True,
+        ):
+            with patch(
+                "backend.app.providers.image.openai_image_provider.urllib.request.urlopen",
+                return_value=_FakeOpenAIResponse(api_response),
+            ):
+                response = self.client.post(
+                    "/api/comic/mock-images",
+                    json={"storyId": story_id, "panelId": "panel_001_01"},
+                )
+
+        self.assertEqual(response.status_code, 201)
+        data = response.get_json()
+        self.assertEqual(data["imageCount"], 1)
+        image = data["images"][0]
+        self.assertEqual(image["provider"], "openai_image")
+        self.assertEqual(image["status"], "generated")
+        self.assertEqual(image["panelId"], "panel_001_01")
+        self.assertTrue(Path(image["uri"]).exists())
+
     def _create_outline(self) -> str:
         response = self.client.post(
             "/api/story/outline",
@@ -224,9 +287,17 @@ class MvpFlowTest(unittest.TestCase):
         self.assertEqual(data["status"], "preview_generated")
         return data["images"]
 
+    def _create_ready_script(self) -> str:
+        story_id = self._create_outline()
+        timeline = self._create_timeline(story_id)
+        self._confirm_timeline(story_id, timeline)
+        self._create_script(story_id)
+        return story_id
+
     def _patch_data_dirs(self, data_dir: Path) -> None:
         modules = [
             "backend.app.storage.json_store",
+            "backend.app.storage.image_store",
             "backend.app.export.pdf_service",
         ]
         for module_name in modules:
@@ -237,6 +308,8 @@ class MvpFlowTest(unittest.TestCase):
                 module.STORIES_DIR = data_dir / "stories"
             if hasattr(module, "EXPORTS_DIR"):
                 module.EXPORTS_DIR = data_dir / "exports"
+            if hasattr(module, "IMAGES_DIR"):
+                module.IMAGES_DIR = data_dir / "images"
 
 
 class _FakeOpenAIResponse:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 
 from .errors import ProviderConfigError
-from .image import ImageProvider, MockImageProvider
+from .image import ImageProvider, MockImageProvider, OpenAIImageProvider
 from .story import MockStoryProvider, OpenAIStoryProvider, StoryProvider
 
 DEFAULT_STORY_PROVIDER = "mock"
@@ -27,6 +27,8 @@ def get_image_provider() -> ImageProvider:
     provider_name = os.environ.get("IMAGE_PROVIDER", DEFAULT_IMAGE_PROVIDER).strip()
     if provider_name == "mock":
         return MockImageProvider()
+    if provider_name == "openai_image":
+        return OpenAIImageProvider()
     raise ProviderConfigError(
         "PROVIDER_CONFIG_ERROR",
         "未知的 ImageProvider 配置。",

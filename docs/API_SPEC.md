@@ -1,6 +1,6 @@
 # MVP API Spec
 
-所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI StoryProvider；M9 以后可通过后端环境变量切换真实 ImageProvider。
+所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI StoryProvider；M9 已支持通过后端环境变量切换 OpenAI ImageProvider。
 
 Provider 配置示例：
 
@@ -16,6 +16,15 @@ STORY_PROVIDER=openai
 OPENAI_API_KEY=<your_api_key>
 OPENAI_STORY_MODEL=gpt-4o-mini
 IMAGE_PROVIDER=mock
+```
+
+OpenAI ImageProvider 配置示例：
+
+```text
+IMAGE_PROVIDER=openai_image
+OPENAI_API_KEY=<your_api_key>
+OPENAI_IMAGE_MODEL=gpt-image-1
+OPENAI_IMAGE_SIZE=1024x1024
 ```
 
 真实 API key 只能放在后端环境变量中，不允许出现在前端、Git、日志或 API 响应里。
@@ -82,6 +91,24 @@ IMAGE_PROVIDER=mock
 ```json
 {
   "storyId": "story_cat_adventure_001"
+}
+```
+
+真实图像 provider 下必须指定单格或单页目标：
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "panelId": "panel_001_01"
+}
+```
+
+或：
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "pageNumber": 1
 }
 ```
 
@@ -243,6 +270,9 @@ IMAGE_PROVIDER=mock
 
 - `STORY_NOT_FOUND`: 找不到 storyId。
 - `SCRIPT_REQUIRED`: 尚未生成 32 页分镜。
+- `IMAGE_TARGET_REQUIRED`: 真实图像 provider 未指定 `panelId` 或 `pageNumber`。
+- `IMAGE_PROMPT_REQUIRED`: 目标分镜缺少 `imagePrompt`。
+- `PROVIDER_CALL_FAILED`: 真实图像 provider 请求失败。
 
 ### Mock 行为
 
@@ -253,9 +283,10 @@ IMAGE_PROVIDER=mock
 ### M9 真实 ImageProvider 行为
 
 - 可由真实图像 provider 根据 `Panel.imagePrompt` 生成图片。
-- 优先支持单 panel 或单页生成。
+- 当前支持单 panel 或单页生成。
 - 不默认一次性生成完整 32 页全部分镜。
 - 图像 provider 不得修改故事、页数、分镜和对白结构。
+- OpenAI ImageProvider 将 base64 图片保存到后端本地 `backend/data/images/` 并写入 `ComicImage.uri`。
 - 生成失败时应记录失败状态，并允许 mock fallback。
 
 ## GET /api/export/pdf
