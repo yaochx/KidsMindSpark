@@ -92,11 +92,17 @@ type ComicImage = {
   provider: "mock" | "real";
   status: "pending" | "generated" | "failed";
   uri: string;
+  sourceUri?: string;
   prompt: string;
   promptHash?: string;
+  model?: string;
+  size?: string;
+  cacheKey?: string;
+  fromCache?: boolean;
   width: number;
   height: number;
   style: string;
+  createdAt?: string;
 };
 ```
 

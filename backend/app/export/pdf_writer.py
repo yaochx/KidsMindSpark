@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import struct
 from typing import Any
 
 PAGE_WIDTH = 595
@@ -51,6 +52,7 @@ def build_comic_pdf(story: dict[str, Any]) -> bytes:
         b"/DW 1000 >>"
     )
 
+    image_refs = _add_image_objects(doc, story.get("images", []))
     page_refs: list[int] = []
     page_bodies: list[tuple[int, bytes]] = []
     pages = story.get("pages", [])
@@ -59,7 +61,7 @@ def build_comic_pdf(story: dict[str, Any]) -> bytes:
     }
 
     for page in pages:
-        content = _build_page_content(story, page, images_by_panel_id)
+        content = _build_page_content(story, page, images_by_panel_id, image_refs)
         content_ref = doc.add_object(
             b"<< /Length "
             + str(len(content)).encode("ascii")
@@ -69,7 +71,7 @@ def build_comic_pdf(story: dict[str, Any]) -> bytes:
         )
         page_ref = doc.add_object(b"")
         page_refs.append(page_ref)
-        page_bodies.append((page_ref, _page_body(content_ref, font_ref)))
+        page_bodies.append((page_ref, _page_body(content_ref, font_ref, image_refs)))
 
     pages_kids = " ".join(f"{ref} 0 R" for ref in page_refs).encode("ascii")
     pages_ref = doc.add_object(
@@ -85,11 +87,19 @@ def build_comic_pdf(story: dict[str, Any]) -> bytes:
     return doc.render(catalog_ref)
 
 
-def _page_body(content_ref: int, font_ref: int) -> bytes:
+def _page_body(content_ref: int, font_ref: int, image_refs: dict[str, tuple[str, int]]) -> bytes:
+    xobject_resources = b""
+    if image_refs:
+        xobject_entries = " ".join(
+            f"/{name} {ref} 0 R" for name, ref in image_refs.values()
+        ).encode("ascii")
+        xobject_resources = b" /XObject << " + xobject_entries + b" >>"
     return (
         b"<< /Type /Page /Parent __PAGES_REF__ "
         + f"/MediaBox [0 0 {PAGE_WIDTH} {PAGE_HEIGHT}] ".encode("ascii")
-        + f"/Resources << /Font << /F1 {font_ref} 0 R >> >> ".encode("ascii")
+        + f"/Resources << /Font << /F1 {font_ref} 0 R >>".encode("ascii")
+        + xobject_resources
+        + b" >> "
         + f"/Contents {content_ref} 0 R >>".encode("ascii")
     )
 
@@ -98,6 +108,7 @@ def _build_page_content(
     story: dict[str, Any],
     page: dict[str, Any],
     images_by_panel_id: dict[str, dict[str, Any]],
+    image_refs: dict[str, tuple[str, int]],
 ) -> bytes:
     commands: list[str] = []
     page_number = int(page.get("pageNumber", 0))
@@ -113,10 +124,20 @@ def _build_page_content(
         x, y, width, height = boxes[index]
         palette = _palette(index)
         _rect(commands, x, y, width, height, fill=(1, 1, 1), stroke=(0.08, 0.08, 0.08))
-        _rect(commands, x + 8, y + height * 0.42, width - 16, height * 0.5, fill=palette, stroke=(0.2, 0.2, 0.2))
+        image = images_by_panel_id.get(panel.get("id", ""))
+        if image and image.get("id") in image_refs:
+            _draw_image(
+                commands,
+                image_refs[str(image.get("id"))][0],
+                x + 8,
+                y + height * 0.42,
+                width - 16,
+                height * 0.5,
+            )
+        else:
+            _rect(commands, x + 8, y + height * 0.42, width - 16, height * 0.5, fill=palette, stroke=(0.2, 0.2, 0.2))
         _text(commands, x + 14, y + height - 24, 10, f"Panel {panel.get('panelNumber')} / {panel.get('shotType')}")
 
-        image = images_by_panel_id.get(panel.get("id", ""))
         _text(commands, x + 14, y + height - 48, 8, image.get("uri", "mock image") if image else "mock image")
         _wrapped_text(commands, x + 14, y + height * 0.37, width - 28, 9, str(panel.get("sceneDescription", "")), max_lines=3)
 
@@ -135,6 +156,72 @@ def _build_page_content(
 
     _text(commands, MARGIN, 22, 9, "MVP output: structured color comic preview with mock image panels. Future: exact 32K print layout.")
     return "\n".join(commands).encode("utf-8")
+
+
+def _add_image_objects(
+    doc: PdfDocument, images: list[dict[str, Any]]
+) -> dict[str, tuple[str, int]]:
+    image_refs: dict[str, tuple[str, int]] = {}
+    for index, image in enumerate(images, start=1):
+        image_id = str(image.get("id", ""))
+        source_uri = str(image.get("sourceUri") or image.get("uri") or "")
+        png = _read_pdf_png(source_uri)
+        if not image_id or png is None:
+            continue
+        width, height, color_space, colors, data = png
+        body = (
+            b"<< /Type /XObject /Subtype /Image "
+            + f"/Width {width} /Height {height} ".encode("ascii")
+            + f"/ColorSpace /{color_space} /BitsPerComponent 8 ".encode("ascii")
+            + b"/Filter /FlateDecode "
+            + (
+                f"/DecodeParms << /Predictor 15 /Colors {colors} "
+                f"/BitsPerComponent 8 /Columns {width} >> "
+            ).encode("ascii")
+            + f"/Length {len(data)} >>\nstream\n".encode("ascii")
+            + data
+            + b"\nendstream"
+        )
+        image_refs[image_id] = (f"Im{index}", doc.add_object(body))
+    return image_refs
+
+
+def _read_pdf_png(source_uri: str) -> tuple[int, int, str, int, bytes] | None:
+    if source_uri.startswith(("http://", "https://", "/")):
+        return None
+    try:
+        data = open(source_uri, "rb").read()
+    except OSError:
+        return None
+    if not data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return None
+
+    cursor = 8
+    width = height = color_type = None
+    idat_parts: list[bytes] = []
+    while cursor + 8 <= len(data):
+        length = struct.unpack(">I", data[cursor : cursor + 4])[0]
+        chunk_type = data[cursor + 4 : cursor + 8]
+        chunk_data = data[cursor + 8 : cursor + 8 + length]
+        cursor += 12 + length
+        if chunk_type == b"IHDR":
+            width, height, bit_depth, color_type, compression, filter_method, interlace = (
+                struct.unpack(">IIBBBBB", chunk_data)
+            )
+            if bit_depth != 8 or compression != 0 or filter_method != 0 or interlace != 0:
+                return None
+        elif chunk_type == b"IDAT":
+            idat_parts.append(chunk_data)
+        elif chunk_type == b"IEND":
+            break
+
+    if not width or not height or not idat_parts:
+        return None
+    if color_type == 2:
+        return width, height, "DeviceRGB", 3, b"".join(idat_parts)
+    if color_type == 0:
+        return width, height, "DeviceGray", 1, b"".join(idat_parts)
+    return None
 
 
 def _panel_boxes(count: int) -> list[tuple[float, float, float, float]]:
@@ -187,6 +274,20 @@ def _rect(
         commands.append("f")
     else:
         commands.append("S")
+
+
+def _draw_image(
+    commands: list[str],
+    image_name: str,
+    x: float,
+    y: float,
+    width: float,
+    height: float,
+) -> None:
+    commands.append("q")
+    commands.append(f"{width:.2f} 0 0 {height:.2f} {x:.2f} {y:.2f} cm")
+    commands.append(f"/{image_name} Do")
+    commands.append("Q")
 
 
 def _text(

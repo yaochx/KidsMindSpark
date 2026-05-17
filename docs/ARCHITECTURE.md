@@ -92,9 +92,9 @@ docs/
 - StoryProvider: 生成核心设定、主线、32 页分镜和每格 `imagePrompt`。
 - Panel Prompt Builder: 基于 `story/page/panel` 构建单格漫画图片 prompt，融合角色设定、分镜结构、中文对白气泡和儿童安全约束；对白气泡内只写对白文本，角色归属由气泡尾巴或指向线表达。
 - ImageProvider: 根据 Panel Prompt Builder 输出的 prompt 生成漫画图像或 mock 图像占位数据。
-- Image Asset Cache: M12 规划的图片资产层，保存真实生图历史产物、promptHash、候选图和 `selectedImageId`。
-- Comic Preview: 以漫画页方式展示图片、对白、旁白和页码；M12 后应把选中的真实图片渲染到对应分镜框。
-- PDF Export: 导出 A4 预览 PDF，M12 后应嵌入选中的真实分镜图片，后续升级 32 开打印。
+- Image Asset Cache: 图片资产层，保存真实生图历史产物、promptHash、候选图和 `selectedImageId`。
+- Comic Preview: 以漫画页方式展示图片、对白、旁白和页码；M12 已支持把选中的真实图片渲染到对应分镜框。
+- PDF Export: 导出 A4 预览 PDF，M12 已支持嵌入选中的真实分镜图片，后续升级 32 开打印。
 - Batch Generation Queue: M13 规划的一键自动化任务层，负责缓存命中、预算限制、状态追踪、失败重试、候选图挑选和单格重生成。
 - Local Project/Budget Model: M14 规划的本地项目层，用 `workspaceId=local_default`、`projectId` 管理故事、缓存和预算，不引入正式账号系统。
 
