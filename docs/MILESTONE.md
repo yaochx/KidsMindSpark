@@ -249,6 +249,15 @@
 
 将当前混合 mock 生成能力拆成两个独立 provider 边界：`StoryProvider` 和 `ImageProvider`。M7 只建立可切换、可校验、可回退的 provider 架构，为后续接入 ChatGPT/OpenAI、MiniMax、GLM、DeepSeek 等文本模型，以及 OpenAI Images、MiniMax Image、可灵、即梦、通义万相等图像模型做准备。
 
+### 为什么要拆分
+
+漫画应用需要两类能力：
+
+- 文本结构能力：故事核心设定、图形化主线、32 页漫画分镜、每个分镜的图像提示词。
+- 图像生成能力：根据每个 panel 的 `imagePrompt` 生成漫画图像，并返回 `ComicImage` 数据。
+
+DeepSeek、GLM、OpenAI 文本模型适合第一类。图像能力必须由 OpenAI Images、MiniMax Image、可灵、即梦、通义万相等图像 provider 承担。
+
 ### Provider 边界
 
 - `StoryProvider`
@@ -285,8 +294,50 @@
 - `backend/tests/`
 - `docs/ARCHITECTURE.md`
 - `docs/API_SPEC.md`
-- `docs/M7_PROVIDER_PLAN.md`
 - `README.md`
+
+### 推荐实施步骤
+
+1. 新建 Provider Interface
+   - 新增 `backend/app/providers/story/base.py`。
+   - 新增 `backend/app/providers/image/base.py`。
+   - 使用 `Protocol` 或抽象基类定义接口。
+   - 不引入外部依赖。
+
+2. 拆分 Mock Provider
+   - 将 `create_outline`、`create_timeline`、`create_script_pages` 移到 `MockStoryProvider`。
+   - 将 mock image 生成移到 `MockImageProvider`。
+   - 保留 API 响应结构不变。
+
+3. 增加 Provider Config
+   - 新增 `backend/app/providers/config.py`。
+   - 读取 `STORY_PROVIDER=mock` 和 `IMAGE_PROVIDER=mock`。
+   - 未配置时默认 mock。
+   - 未知 provider 必须返回清晰错误。
+
+4. 改造服务层依赖
+   - `story_service.py` 使用 `get_story_provider()`。
+   - `timeline_service.py` 使用 `get_story_provider()`。
+   - `script_service.py` 使用 `get_story_provider()`。
+   - `mock_image_service.py` 使用 `get_image_provider()`。
+   - 服务层不直接 import 具体厂商 provider。
+
+5. 更新测试
+   - 保留完整流程测试。
+   - 增加 provider 配置测试。
+   - 确认 32 页、1-4 分镜、短对白、预览、PDF 导出仍通过。
+
+6. 更新 README
+   - 增加本地配置说明：
+
+```bash
+export STORY_PROVIDER=mock
+export IMAGE_PROVIDER=mock
+```
+
+   - 明确 M7 只完成 provider 拆分。
+   - 明确真实文本模型和真实图像模型在后续 milestone 接入。
+   - 明确 API key 只允许放在后端环境变量，不允许进入前端或 Git。
 
 ### 验收标准
 
@@ -303,6 +354,9 @@
 - 不允许把 API key 写入前端、代码或 Git。
 - 不允许把 ChatGPT Pro、Codex login、浏览器 cookie 或个人会话当作应用 provider。
 - 不允许一次性接入多个真实文本模型和多个真实图像模型。
+- 不允许在 M7 接入真实 OpenAI、DeepSeek、GLM、MiniMax API。
+- 不允许在 M7 生成真实漫画图片。
+- 不允许改变前端主流程。
 - 不允许真实图像生成默认一次性跑完整 32 页全部分镜。
 - 不允许绕过主线确认、32 页、1-4 分镜、短对白等硬约束。
 - 不允许把图像 provider 设计成能改写故事正文。
