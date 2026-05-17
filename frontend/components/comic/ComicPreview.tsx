@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { PdfExportPanel } from "@/components/export/PdfExportPanel";
+import { apiUrl } from "@/lib/api/client";
 import { createMockComicImages } from "@/lib/api/comic";
 import type { ComicImage } from "@/lib/types/comic";
 import type { ScriptPage } from "@/lib/types/script";
@@ -164,9 +165,18 @@ export function ComicPreview({ storyId, pages }: ComicPreviewProps) {
                           paletteClasses[panelIndex % paletteClasses.length]
                         } p-3`}
                       >
-                        <div className="rounded-md bg-white/80 px-3 py-2 text-sm font-semibold text-slate-800">
-                          {image?.uri || "image-pending"}
-                        </div>
+                        {image?.status === "generated" && renderableImageSrc(image.uri) ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            alt={`${page.title} 第 ${panel.panelNumber} 格`}
+                            className="min-h-44 w-full rounded-md border border-white/70 object-cover"
+                            src={renderableImageSrc(image.uri)}
+                          />
+                        ) : (
+                          <div className="rounded-md bg-white/80 px-3 py-2 text-sm font-semibold text-slate-800">
+                            {image?.uri || "image-pending"}
+                          </div>
+                        )}
                         <p className="rounded-md bg-white/80 px-3 py-2 text-base font-semibold leading-6 text-ink">
                           {panel.sceneDescription}
                         </p>
@@ -227,4 +237,14 @@ function mergeImages(currentImages: ComicImage[], newImages: ComicImage[]) {
   const imageByPanelId = new Map(currentImages.map((image) => [image.panelId, image]));
   newImages.forEach((image) => imageByPanelId.set(image.panelId, image));
   return Array.from(imageByPanelId.values());
+}
+
+function renderableImageSrc(uri: string) {
+  if (uri.startsWith("http://") || uri.startsWith("https://")) {
+    return uri;
+  }
+  if (uri.startsWith("/api/")) {
+    return apiUrl(uri);
+  }
+  return "";
 }

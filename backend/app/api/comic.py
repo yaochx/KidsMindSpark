@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 
 from ..services.mock_image_service import MockImageError, generate_mock_images
+from ..storage.image_store import image_path_for_id
 
 comic_bp = Blueprint("comic", __name__, url_prefix="/api/comic")
 
@@ -31,3 +32,22 @@ def mock_images():
         )
 
     return jsonify(result), 201
+
+
+@comic_bp.get("/images/<image_id>")
+def generated_image(image_id: str):
+    image_path = image_path_for_id(image_id)
+    if image_path is None:
+        return (
+            jsonify(
+                {
+                    "error": {
+                        "code": "IMAGE_NOT_FOUND",
+                        "message": "找不到这张图片。",
+                        "details": {},
+                    }
+                }
+            ),
+            404,
+        )
+    return send_file(image_path, mimetype="image/png")

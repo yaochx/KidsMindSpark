@@ -5,6 +5,7 @@ import os
 import urllib.error
 import urllib.request
 from typing import Any
+from uuid import uuid4
 
 from ...storage.image_store import save_base64_png
 from ..errors import ProviderCallError, ProviderConfigError, ProviderResponseError
@@ -43,9 +44,9 @@ class OpenAIImageProvider:
         panel_items = _select_panels(story, target)
         images: list[dict[str, Any]] = []
         for page, panel in panel_items:
-            image_id = f"img_{panel['id']}"
             prompt = build_panel_image_prompt(story, page, panel)
             prompt_hash = build_panel_prompt_hash(prompt)
+            image_id = f"img_{panel['id']}_{prompt_hash[:8]}_{uuid4().hex[:8]}"
             try:
                 image_path = self._generate_png(image_id, prompt)
                 status = "generated"

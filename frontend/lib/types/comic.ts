@@ -4,8 +4,12 @@ export type ComicImage = {
   provider: "mock" | "openai_image" | "real";
   status: "pending" | "generated" | "failed";
   uri: string;
+  sourceUri?: string;
   prompt: string;
   promptHash?: string;
+  fromCache?: boolean;
+  model?: string;
+  size?: string;
   width: number;
   height: number;
   style: string;

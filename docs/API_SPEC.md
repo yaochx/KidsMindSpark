@@ -1,6 +1,6 @@
 # MVP API Spec
 
-所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI 或 DeepSeek StoryProvider；M9 已支持通过后端环境变量切换 OpenAI 或豆包 Seedream ImageProvider。M11 已支持使用统一 Panel Prompt Builder 为真实 ImageProvider 构建单格漫画 prompt。
+所有 API 默认使用 mock 行为。本地 JSON 是默认持久化方式。M8 已支持通过后端环境变量切换 OpenAI 或 DeepSeek StoryProvider；M9 已支持通过后端环境变量切换 OpenAI 或豆包 Seedream ImageProvider。M11 已支持使用统一 Panel Prompt Builder 为真实 ImageProvider 构建单格漫画 prompt。M12 已支持真实图片缓存、预览读取和 PDF 嵌图。
 
 Provider 配置示例：
 
@@ -348,6 +348,28 @@ DOUBAO_SEEDREAM_RESPONSE_FORMAT=b64_json
 - 默认建议页数范围为 16-48 页，每页 1-4 格，单故事最多 96 个 panel。
 - 生图预算应限制单故事最大生成图片数、单批任务最大生成图片数、每个 panel 最大候选图数量。
 - 本地 MVP 可先使用 `workspaceId=local_default` 和 `projectId` 管理故事、缓存、候选图和预算，不引入账号登录。
+
+## GET /api/comic/images/:imageId
+
+### Request
+
+```text
+/api/comic/images/img_panel_001_01_xxxxxxxx
+```
+
+### Response
+
+成功时返回 `image/png` 文件流。
+
+### Error
+
+- `IMAGE_NOT_FOUND`: 找不到图片，或 `imageId` 不符合安全命名规则。
+
+### M12 行为
+
+- 只允许读取后端本地 images 目录下由系统生成的 PNG。
+- 不允许通过该接口读取任意本地路径。
+- 前端漫画预览可使用该接口渲染真实单格图片。
 
 ## GET /api/export/pdf
 
