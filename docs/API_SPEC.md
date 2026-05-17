@@ -1,0 +1,250 @@
+# MVP API Spec
+
+所有 API 在 MVP 阶段使用 mock 行为。本地 JSON 是默认持久化方式。
+
+## 通用错误格式
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "请求参数不符合要求。",
+    "details": {}
+  }
+}
+```
+
+## POST /api/story/outline
+
+### Request
+
+```json
+{
+  "title": "三只小猫的森林桃源",
+  "concept": "三只小猫老大老二老三，拿着猎枪去森林流浪冒险，遇到刺猬、眼珠和奇怪动物，最后发现一座世外桃源。",
+  "targetAge": "小学 1-4 年级",
+  "visualStyle": "mixed_east_asian_color_comic"
+}
+```
+
+### Response
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "title": "三只小猫的森林桃源",
+  "safeConcept": "三只小猫老大、老二、老三，带着木头探险杖去森林冒险，遇到刺猬、会眨眼的神秘果实和奇怪动物，最后发现一座世外桃源。",
+  "characters": [],
+  "status": "outlined"
+}
+```
+
+### Error
+
+- `VALIDATION_ERROR`: title 或 concept 为空。
+- `AGE_UNSUPPORTED`: targetAge 不在 MVP 支持范围内。
+
+### Mock 行为
+
+- 创建 story JSON。
+- 将危险道具改写为安全冒险道具。
+- 返回核心设定，不生成主线、不生成正文。
+
+## POST /api/story/timeline
+
+### Request
+
+```json
+{
+  "storyId": "story_cat_adventure_001"
+}
+```
+
+### Response
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "timeline": [
+    {
+      "id": "node_opening",
+      "type": "opening",
+      "title": "森林边的小路",
+      "summary": "三只小猫听说森林深处有一条会发光的小溪。",
+      "order": 1,
+      "nextNodeIds": ["node_hero"]
+    }
+  ],
+  "status": "outlined"
+}
+```
+
+### Error
+
+- `STORY_NOT_FOUND`: 找不到 storyId。
+- `OUTLINE_REQUIRED`: 尚未生成核心设定。
+
+### Mock 行为
+
+- 生成固定 9 类主线节点：开场、主角、目标、伙伴、阻碍、转折、危机、解决、结局。
+- 不生成 32 页分镜。
+
+## PUT /api/story/timeline
+
+### Request
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "timeline": [
+    {
+      "id": "node_opening",
+      "type": "opening",
+      "title": "森林边的小路",
+      "summary": "三只小猫听说森林深处有一条会发光的小溪。",
+      "order": 1,
+      "nextNodeIds": ["node_hero"]
+    }
+  ],
+  "confirmed": true
+}
+```
+
+### Response
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "timeline": [],
+  "status": "timeline_confirmed"
+}
+```
+
+### Error
+
+- `STORY_NOT_FOUND`: 找不到 storyId。
+- `TIMELINE_INVALID`: 缺少必需节点或节点顺序非法。
+- `NODE_OVERFLOW`: 节点内容过长，不适合图形化展示。
+
+### Mock 行为
+
+- 校验 9 类节点是否齐全。
+- 保存用户编辑后的 timeline。
+- `confirmed=true` 时将状态改为 `timeline_confirmed`。
+
+## POST /api/story/script
+
+### Request
+
+```json
+{
+  "storyId": "story_cat_adventure_001"
+}
+```
+
+### Response
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "pageCount": 32,
+  "pages": [
+    {
+      "pageNumber": 1,
+      "title": "森林的邀请",
+      "storyBeat": "三只小猫在家门口发现一张发光树叶地图。",
+      "panels": []
+    }
+  ],
+  "status": "script_generated"
+}
+```
+
+### Error
+
+- `STORY_NOT_FOUND`: 找不到 storyId。
+- `TIMELINE_NOT_CONFIRMED`: 主线尚未确认。
+- `SCRIPT_CONSTRAINT_FAILED`: 未满足 32 页或每页 1-4 分镜约束。
+
+### Mock 行为
+
+- 必须生成正好 32 个 `ScriptPage`。
+- 每页生成 1-4 个 `Panel`。
+- 每页对白保持短句。
+
+## POST /api/comic/mock-images
+
+### Request
+
+```json
+{
+  "storyId": "story_cat_adventure_001"
+}
+```
+
+### Response
+
+```json
+{
+  "storyId": "story_cat_adventure_001",
+  "images": [
+    {
+      "id": "img_panel_001_01",
+      "panelId": "panel_001_01",
+      "provider": "mock",
+      "status": "generated",
+      "uri": "/mock-images/color-comic-placeholder-001.svg",
+      "width": 1024,
+      "height": 768
+    }
+  ],
+  "status": "preview_generated"
+}
+```
+
+### Error
+
+- `STORY_NOT_FOUND`: 找不到 storyId。
+- `SCRIPT_REQUIRED`: 尚未生成 32 页分镜。
+
+### Mock 行为
+
+- 为每个 panel 生成一个 mock image 记录。
+- 图片可以是本地占位 SVG/PNG 或前端占位 URI。
+- 不调用真实图像生成。
+
+## GET /api/export/pdf
+
+### Request
+
+Query:
+
+```text
+/api/export/pdf?storyId=story_cat_adventure_001&format=a4_preview_pdf
+```
+
+### Response
+
+成功时返回 PDF 文件流，或在异步模式下返回：
+
+```json
+{
+  "exportJobId": "export_001",
+  "storyId": "story_cat_adventure_001",
+  "format": "a4_preview_pdf",
+  "status": "completed",
+  "outputUri": "/exports/story_cat_adventure_001_a4_preview.pdf"
+}
+```
+
+### Error
+
+- `STORY_NOT_FOUND`: 找不到 storyId。
+- `PREVIEW_REQUIRED`: 尚未生成漫画预览。
+- `EXPORT_FAILED`: PDF 生成失败。
+
+### Mock 行为
+
+- 基于 32 页漫画预览结构生成 A4 预览 PDF。
+- 不允许只输出纯文本故事。
+- 记录 `ExportJob`。
