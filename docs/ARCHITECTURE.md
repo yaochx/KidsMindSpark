@@ -104,3 +104,23 @@ IMAGE_PROVIDER=mock
 - `ImageProvider` 可接入图像模型，例如 OpenAI Images、MiniMax Image、可灵、即梦、通义万相。
 - DeepSeek 这类纯文本模型不得作为 ImageProvider 使用。
 - 所有 provider 输出必须经过服务层结构校验，模型不能决定页数、跳过主线确认或改变 PDF 目标。
+
+## 真实 API 接入路线
+
+- M7: 只拆分 StoryProvider 与 ImageProvider，默认仍使用 mock。
+- M8: 只接入一个真实 StoryProvider，用于文本结构生成和 `imagePrompt`。
+- M9: 只接入一个真实 ImageProvider，优先单 panel 或单页生成。
+- M10: 稳定真实工作流，补齐 fallback、缓存、错误处理、调用次数限制和测试。
+
+真实 API key 只允许通过后端环境变量读取：
+
+```text
+STORY_PROVIDER=mock
+IMAGE_PROVIDER=mock
+OPENAI_API_KEY=
+DEEPSEEK_API_KEY=
+GLM_API_KEY=
+MINIMAX_API_KEY=
+```
+
+前端不得读取、传输或展示任何 provider key。

@@ -87,3 +87,27 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 - M4 彩色漫画预览页：已完成。
 - M5 PDF 导出：已完成。
 - M6 优化与测试：已完成。
+- M7 Provider 拆分与真实模型预备层：下一步。
+- M8 真实 StoryProvider 接入：规划中。
+- M9 真实 ImageProvider 接入：规划中。
+- M10 真实工作流稳定化：规划中。
+
+## 真实 API 接入路线
+
+当前应用仍默认使用 mock provider，不调用真实 GPT、DeepSeek、GLM、MiniMax 或图像生成 API。
+
+后续真实 API 接入按阶段推进：
+
+1. M7: 拆分 `StoryProvider` 和 `ImageProvider`，默认仍使用 mock。
+2. M8: 接入一个真实文本 provider，用于故事、主线、32 页脚本和 `imagePrompt`。
+3. M9: 接入一个真实图像 provider，优先支持单 panel 或单页生成。
+4. M10: 补齐 fallback、缓存、错误处理、调用次数限制和测试。
+
+本地 provider 配置示例：
+
+```bash
+export STORY_PROVIDER=mock
+export IMAGE_PROVIDER=mock
+```
+
+真实 API key 只能放在后端环境变量中，不能写入前端、代码或 Git。不要使用 ChatGPT Pro、Codex login、浏览器 cookie 或个人 session 作为应用 provider。
