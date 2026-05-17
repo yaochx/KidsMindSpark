@@ -42,7 +42,8 @@ class MvpFlowTest(unittest.TestCase):
         self._confirm_timeline(story_id, timeline)
         pages = self._create_script(story_id)
 
-        self.assertEqual(len(pages), 32)
+        self.assertGreaterEqual(len(pages), 16)
+        self.assertLessEqual(len(pages), 48)
         for page in pages:
             self.assertGreaterEqual(len(page["panels"]), 1)
             self.assertLessEqual(len(page["panels"]), 4)
@@ -52,6 +53,7 @@ class MvpFlowTest(unittest.TestCase):
 
         images = self._create_mock_images(story_id)
         panel_count = sum(len(page["panels"]) for page in pages)
+        self.assertLessEqual(panel_count, 96)
         self.assertEqual(len(images), panel_count)
 
         response = self.client.get(
@@ -825,7 +827,9 @@ class MvpFlowTest(unittest.TestCase):
         response = self.client.post("/api/story/script", json={"storyId": story_id})
         self.assertEqual(response.status_code, 201)
         data = response.get_json()
-        self.assertEqual(data["pageCount"], 32)
+        self.assertEqual(data["pageCount"], len(data["pages"]))
+        self.assertGreaterEqual(data["pageCount"], 16)
+        self.assertLessEqual(data["pageCount"], 48)
         self.assertEqual(data["status"], "script_generated")
         return data["pages"]
 

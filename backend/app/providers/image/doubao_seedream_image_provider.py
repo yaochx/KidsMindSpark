@@ -52,7 +52,7 @@ class DoubaoSeedreamImageProvider:
         if target is None:
             raise ProviderConfigError(
                 "IMAGE_TARGET_REQUIRED",
-                "真实图像生成必须指定 panelId 或 pageNumber，不能默认生成完整 32 页。",
+                "真实图像生成必须指定 panelId 或 pageNumber，不能默认生成整本故事。",
             )
 
         panel_items = _select_panels(story, target)

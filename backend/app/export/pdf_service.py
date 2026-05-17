@@ -6,6 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 from ..storage.json_store import DATA_DIR, load_story, save_story
+from ..services.page_policy import page_count_in_range
 from .pdf_writer import build_comic_pdf
 
 EXPORTS_DIR = DATA_DIR / "exports"
@@ -35,8 +36,8 @@ def export_story_pdf(story_id: str, export_format: str) -> tuple[bytes, str]:
 
     pages = story.get("pages", [])
     images = story.get("images", [])
-    if len(pages) != 32 or not images:
-        raise ExportError("PREVIEW_REQUIRED", "PDF 导出需要 32 页漫画预览和 mock 图片。")
+    if not page_count_in_range(len(pages)) or not images:
+        raise ExportError("PREVIEW_REQUIRED", "PDF 导出需要漫画预览和图片。")
 
     try:
         pdf_bytes = build_comic_pdf(story)

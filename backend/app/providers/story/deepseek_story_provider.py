@@ -16,7 +16,7 @@ SYSTEM_INSTRUCTIONS = """
 必须只输出 JSON，不要输出 Markdown、解释、代码块或多余文本。
 所有内容必须适合小学生阅读，避免危险行为、恐怖细节和成人化表达。
 如用户概念含有危险物品，请改写为安全的儿童探险道具。
-必须保持固定 32 页漫画结构，主线节点适合图形化展示。
+必须保持故事优先但有边界的漫画结构，主线节点适合图形化展示。
 返回内容必须是合法 json 对象。
 """.strip()
 
@@ -123,12 +123,13 @@ class DeepSeekStoryProvider:
 
     def create_script_pages(self, story: dict[str, Any]) -> list[dict[str, Any]]:
         result = self._request_json(
-            task="生成固定 32 页彩色漫画分镜脚本",
+            task="生成 16-48 页彩色漫画分镜脚本",
             user_payload={
                 "story": _story_context(story),
                 "timeline": story.get("timeline", []),
                 "rules": [
-                    "必须正好 32 页。",
+                    "页数必须在 16-48 页之间，由故事表达需要决定。",
+                    "整个故事最多 96 个分镜。",
                     "每页必须 1-4 个分镜。",
                     "每条对白不超过 18 个中文字符。",
                     "每个 panel 必须包含 imagePrompt。",
@@ -138,7 +139,7 @@ class DeepSeekStoryProvider:
                 "requiredOutput": {
                     "pages": [
                         {
-                            "pageNumber": "integer 1-32",
+                            "pageNumber": "integer, starts at 1",
                             "title": "string",
                             "storyBeat": "string",
                             "panels": [

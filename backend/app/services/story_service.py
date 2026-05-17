@@ -7,6 +7,14 @@ from uuid import uuid4
 from ..providers.config import get_story_provider
 from ..providers.errors import ProviderError
 from ..storage.json_store import save_story
+from .page_policy import (
+    MAX_IMAGES_PER_BATCH,
+    MAX_IMAGES_PER_STORY,
+    MAX_STORY_PANELS,
+    MAX_STORY_PAGES,
+    MAX_VARIANTS_PER_PANEL,
+    MIN_STORY_PAGES,
+)
 
 SUPPORTED_AGES = {"小学 1-4 年级", "小学 5-6 年级"}
 SUPPORTED_STYLES = {
@@ -36,6 +44,8 @@ def create_story_outline(payload: dict[str, Any]) -> dict[str, Any]:
 
     story = {
         "id": story_id,
+        "workspaceId": "local_default",
+        "projectId": f"project_{story_id.removeprefix('story_')}",
         "title": normalized["title"],
         "concept": normalized["concept"],
         "safeConcept": outline["safeConcept"],
@@ -46,13 +56,31 @@ def create_story_outline(payload: dict[str, Any]) -> dict[str, Any]:
         "timeline": [],
         "pages": [],
         "images": [],
+        "imageAssets": [],
+        "generationJobs": [],
         "exportJobs": [],
+        "pagePolicy": {
+            "mode": "story_first_bounded",
+            "minPages": MIN_STORY_PAGES,
+            "maxPages": MAX_STORY_PAGES,
+            "maxPanels": MAX_STORY_PANELS,
+            "panelsPerPage": {"min": 1, "max": 4},
+        },
+        "imageBudget": {
+            "maxImagesPerStory": MAX_IMAGES_PER_STORY,
+            "maxImagesPerBatch": MAX_IMAGES_PER_BATCH,
+            "maxVariantsPerPanel": MAX_VARIANTS_PER_PANEL,
+        },
         "createdAt": now,
         "updatedAt": now,
     }
     save_story(story_id, story)
 
-    return outline
+    return {
+        **outline,
+        "workspaceId": story["workspaceId"],
+        "projectId": story["projectId"],
+    }
 
 
 def _validate_outline_payload(payload: dict[str, Any]) -> dict[str, str]:

@@ -27,7 +27,7 @@ flowchart LR
     subgraph Frontend[Frontend]
         FE --> Input[故事输入页]
         FE --> Timeline[图形化主线确认页<br/>Mermaid / React Flow]
-        FE --> Script[32 页分镜脚本页]
+        FE --> Script[漫画分镜脚本页<br/>16-48 页]
         FE --> Preview[彩色漫画预览页]
         FE --> ExportUI[PDF 导出控件]
     end
@@ -47,7 +47,7 @@ flowchart LR
 
     StoryProvider --> Outline[核心设定]
     StoryProvider --> TimelineData[主线节点]
-    StoryProvider --> ScriptData[32 页分镜与 imagePrompt]
+    StoryProvider --> ScriptData[16-48 页分镜与 imagePrompt]
     ImageProvider --> ComicImages[单格漫画图像或 mock 图像]
 
     PdfService --> PDF[A4 PDF Preview<br/>Future: 32 开打印]
@@ -88,15 +88,15 @@ docs/
 - Outline Generator: 生成核心设定，包括主题、角色、风格和儿童适龄改写。
 - Timeline Generator: 生成图形化主线节点。
 - Timeline Editor: 用户确认或编辑主线。
-- Script Generator: 生成固定 32 页漫画脚本。
-- StoryProvider: 生成核心设定、主线、32 页分镜和每格 `imagePrompt`。
+- Script Generator: 生成 16-48 页故事优先漫画脚本。
+- StoryProvider: 生成核心设定、主线、16-48 页分镜和每格 `imagePrompt`。
 - Panel Prompt Builder: 基于 `story/page/panel` 构建单格漫画图片 prompt，融合角色设定、分镜结构、中文对白气泡和儿童安全约束；对白气泡内只写对白文本，角色归属由气泡尾巴或指向线表达。
 - ImageProvider: 根据 Panel Prompt Builder 输出的 prompt 生成漫画图像或 mock 图像占位数据。
 - Image Asset Cache: 图片资产层，保存真实生图历史产物、promptHash、候选图和 `selectedImageId`。
 - Comic Preview: 以漫画页方式展示图片、对白、旁白和页码；M12 已支持把选中的真实图片渲染到对应分镜框。
 - PDF Export: 导出 A4 预览 PDF，M12 已支持嵌入选中的真实分镜图片，后续升级 32 开打印。
 - Batch Generation Queue: 一键自动化任务层，负责缓存命中、预算限制、状态追踪、失败重试、候选图挑选和单格重生成。
-- Local Project/Budget Model: M14 规划的本地项目层，用 `workspaceId=local_default`、`projectId` 管理故事、缓存和预算，不引入正式账号系统。
+- Local Project/Budget Model: M14 本地项目层，用 `workspaceId=local_default`、`projectId` 管理故事、缓存和预算，不引入正式账号系统。
 
 ## M7 Provider 配置原则
 
@@ -108,7 +108,7 @@ IMAGE_PROVIDER=mock
 - `StoryProvider` 可接入文本模型，例如 OpenAI、DeepSeek、GLM、MiniMax。
 - `ImageProvider` 可接入图像模型，例如 OpenAI Images、MiniMax Image、可灵、即梦、通义万相。
 - DeepSeek 这类纯文本模型不得作为 ImageProvider 使用。
-- 所有 provider 输出必须经过服务层结构校验，模型不能决定页数、跳过主线确认或改变 PDF 目标。
+- 所有 provider 输出必须经过服务层结构校验，模型只能在 16-48 页范围内决定页数，不能跳过主线确认或改变 PDF 目标。
 
 ## 真实 API 接入路线
 

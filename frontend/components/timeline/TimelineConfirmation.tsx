@@ -98,7 +98,7 @@ export function TimelineConfirmation({
           <p className="text-sm font-semibold text-sky-700">M2 主线确认页</p>
           <h2 className="mt-2 text-2xl font-bold text-ink">图形化故事主线</h2>
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-700">
-            先确认这 9 个故事节点。确认后，下一阶段才能生成固定 32 页漫画分镜。
+            先确认这 9 个故事节点。确认后，下一阶段才能生成漫画分镜。
           </p>
         </div>
 
@@ -131,7 +131,7 @@ export function TimelineConfirmation({
 
       {status === "confirmed" ? (
         <p className="mt-5 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-base font-semibold text-green-800">
-          主线已确认。下一步是 M3：基于已确认主线生成固定 32 页分镜脚本。
+          主线已确认。下一步是 M3：基于已确认主线生成漫画分镜脚本。
         </p>
       ) : null}
 

@@ -18,6 +18,9 @@ const shotTypeLabels: Record<string, string> = {
   action: "动作"
 };
 
+const MIN_STORY_PAGES = 16;
+const MAX_STORY_PAGES = 48;
+
 export function ScriptPageList({ storyId, canGenerate }: ScriptPageListProps) {
   const [pages, setPages] = useState<ScriptPage[]>([]);
   const [error, setError] = useState("");
@@ -43,11 +46,11 @@ export function ScriptPageList({ storyId, canGenerate }: ScriptPageListProps) {
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-sm font-semibold text-violet-700">
-            M3 32 页分镜脚本页
+            M3 漫画分镜脚本页
           </p>
           <h2 className="mt-2 text-2xl font-bold text-ink">漫画分镜脚本</h2>
           <p className="mt-3 max-w-2xl text-base leading-7 text-slate-700">
-            基于已确认主线生成固定 32 页脚本。每页 1-4 个分镜，对白保持短句。
+            基于已确认主线生成 16-48 页脚本。每页 1-4 个分镜，对白保持短句。
           </p>
         </div>
 
@@ -57,13 +60,13 @@ export function ScriptPageList({ storyId, canGenerate }: ScriptPageListProps) {
           onClick={handleGenerateScript}
           type="button"
         >
-          {isLoading ? "正在安排 32 页分镜" : "生成 32 页分镜脚本"}
+          {isLoading ? "正在安排漫画分镜" : "生成漫画分镜脚本"}
         </button>
         </div>
 
         {!canGenerate ? (
           <p className="mt-5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-base text-amber-800">
-            请先确认图形化故事主线，再生成 32 页分镜脚本。
+            请先确认图形化故事主线，再生成漫画分镜脚本。
           </p>
         ) : null}
 
@@ -77,7 +80,7 @@ export function ScriptPageList({ storyId, canGenerate }: ScriptPageListProps) {
           <>
           <div className="mt-5 grid gap-3 rounded-lg border border-violet-100 bg-violet-50 p-4 sm:grid-cols-3">
             <p className="text-base font-semibold text-violet-900">
-              页数：{pages.length}/32
+              页数：{pages.length} 页
             </p>
             <p className="text-base font-semibold text-violet-900">
               每页分镜：1-4 个
@@ -156,13 +159,15 @@ export function ScriptPageList({ storyId, canGenerate }: ScriptPageListProps) {
           <div className="mt-6 rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6">
             <h3 className="text-xl font-semibold text-ink">尚未生成分镜脚本</h3>
             <p className="mt-3 text-base leading-7 text-slate-700">
-              主线确认后，可以生成固定 32 页分镜脚本，然后继续生成彩色 mock 漫画预览。本阶段仍不会导出 PDF。
+              主线确认后，可以生成 16-48 页分镜脚本，然后继续生成彩色 mock 漫画预览。本阶段仍不会导出 PDF。
             </p>
           </div>
         )}
       </div>
 
-      {pages.length === 32 ? <ComicPreview pages={pages} storyId={storyId} /> : null}
+      {pages.length >= MIN_STORY_PAGES && pages.length <= MAX_STORY_PAGES ? (
+        <ComicPreview pages={pages} storyId={storyId} />
+      ) : null}
     </section>
   );
 }

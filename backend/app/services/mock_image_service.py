@@ -12,6 +12,13 @@ from ..providers.image.prompt_builder import (
     build_panel_prompt_hash,
 )
 from ..storage.json_store import load_story, save_story
+from .page_policy import (
+    MAX_IMAGES_PER_BATCH,
+    MAX_IMAGES_PER_STORY,
+    MAX_STORY_PANELS,
+    MAX_VARIANTS_PER_PANEL,
+    page_count_in_range,
+)
 
 
 class MockImageError(ValueError):
@@ -31,7 +38,7 @@ def generate_mock_images(payload: dict[str, Any]) -> dict[str, Any]:
     if story is None:
         raise MockImageError("STORY_NOT_FOUND", "找不到这个故事。")
     if story.get("status") not in {"script_generated", "preview_generated", "exported"}:
-        raise MockImageError("SCRIPT_REQUIRED", "请先生成固定 32 页分镜脚本。")
+        raise MockImageError("SCRIPT_REQUIRED", "请先生成漫画分镜脚本。")
 
     pages = story.get("pages", [])
     _validate_pages_for_preview(pages)
@@ -42,7 +49,7 @@ def generate_mock_images(payload: dict[str, Any]) -> dict[str, Any]:
         if provider.name != "mock" and target is None:
             raise MockImageError(
                 "IMAGE_TARGET_REQUIRED",
-                "真实图像生成必须指定 panelId 或 pageNumber，不能默认生成完整 32 页。",
+                "真实图像生成必须指定 panelId 或 pageNumber，不能默认生成整本故事。",
             )
         if provider.name == "mock":
             images = provider.create_images(story, target)
@@ -222,21 +229,29 @@ def _create_real_images_with_cache(
 
 
 def _validate_pages_for_preview(pages: list[dict[str, Any]]) -> None:
-    if len(pages) != 32:
+    if not page_count_in_range(len(pages)):
         raise MockImageError(
             "SCRIPT_REQUIRED",
-            "漫画预览需要固定 32 页分镜脚本。",
+            "漫画预览需要 16-48 页的分镜脚本。",
             {"pageCount": str(len(pages))},
         )
 
+    panel_total = 0
     for page in pages:
         panels = page.get("panels", [])
+        panel_total += len(panels)
         if not 1 <= len(panels) <= 4:
             raise MockImageError(
                 "SCRIPT_REQUIRED",
                 "每页必须包含 1-4 个分镜。",
                 {"pageNumber": str(page.get("pageNumber"))},
             )
+    if panel_total > MAX_STORY_PANELS:
+        raise MockImageError(
+            "SCRIPT_REQUIRED",
+            "漫画预览最多支持 96 个分镜。",
+            {"panelCount": str(panel_total)},
+        )
 
 
 def _build_generation_target(payload: dict[str, Any]) -> ImageGenerationTarget | None:
@@ -258,12 +273,12 @@ def _build_generation_target(payload: dict[str, Any]) -> ImageGenerationTarget |
     except (TypeError, ValueError) as error:
         raise MockImageError(
             "VALIDATION_ERROR",
-            "pageNumber 必须是 1-32 的整数。",
+            "pageNumber 必须是正整数。",
         ) from error
-    if not 1 <= page_number <= 32:
+    if page_number < 1:
         raise MockImageError(
             "VALIDATION_ERROR",
-            "pageNumber 必须是 1-32 的整数。",
+            "pageNumber 必须是正整数。",
         )
     return ImageGenerationTarget(page_number=page_number)
 
@@ -273,7 +288,7 @@ def _generation_budget(raw_max_images: object) -> int:
         max_images = int(raw_max_images)
     except (TypeError, ValueError) as error:
         raise MockImageError("VALIDATION_ERROR", "maxImages 必须是 1-24 的整数。") from error
-    if not 1 <= max_images <= 24:
+    if not 1 <= max_images <= MAX_IMAGES_PER_BATCH:
         raise MockImageError("VALIDATION_ERROR", "maxImages 必须是 1-24 的整数。")
     return max_images
 
@@ -329,7 +344,7 @@ def _normalize_real_image(
     normalized = dict(image)
     image_id = str(normalized.get("id", ""))
     uri = str(normalized.get("uri", ""))
-    normalized["storyId"] = story.get("storyId", "")
+    normalized["storyId"] = story.get("id", "")
     normalized["model"] = str(getattr(provider, "model", ""))
     normalized["size"] = str(getattr(provider, "size", ""))
     normalized["cacheKey"] = cache_key
@@ -363,4 +378,19 @@ def _merge_image_assets(
     }
     for image in new_images:
         by_id[str(image.get("id"))] = image
-    return list(by_id.values())
+
+    by_panel_id: dict[str, list[dict[str, Any]]] = {}
+    for image in sorted(
+        by_id.values(),
+        key=lambda item: str(item.get("createdAt", "")),
+        reverse=True,
+    ):
+        panel_id = str(image.get("panelId", ""))
+        variants = by_panel_id.setdefault(panel_id, [])
+        if len(variants) < MAX_VARIANTS_PER_PANEL:
+            variants.append(image)
+
+    capped_assets = [
+        image for variants in by_panel_id.values() for image in variants
+    ][:MAX_IMAGES_PER_STORY]
+    return sorted(capped_assets, key=lambda item: str(item.get("createdAt", "")))
