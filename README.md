@@ -2,7 +2,7 @@
 
 儿童中式/日式彩色漫画故事生成 MVP。
 
-当前进度：M6 优化与测试。
+当前进度：M7 Provider 拆分与真实模型预备层。
 
 ## 开发约束
 
@@ -11,7 +11,7 @@
 1. `docs/AI_CONTRACT.md`
 2. `docs/MILESTONE.md`
 
-当前 M6 包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出，以及后端集成测试。
+当前 M7 包含结构化故事输入页、图形化故事主线确认、固定 32 页分镜脚本、彩色漫画 mock 预览、A4 PDF 预览导出、后端集成测试，以及 StoryProvider / ImageProvider 的 mock provider 拆分。
 
 ## 前端启动
 
@@ -32,6 +32,22 @@ http://localhost:3000
 ```bash
 .venv/bin/flask --app backend.app run --debug
 ```
+
+## Provider 配置
+
+默认使用 mock provider，不调用真实模型：
+
+```bash
+export STORY_PROVIDER=mock
+export IMAGE_PROVIDER=mock
+```
+
+说明：
+
+- `StoryProvider` 负责故事核心设定、主线、32 页脚本和 `imagePrompt`。
+- `ImageProvider` 负责根据 `imagePrompt` 生成或返回图片记录。
+- M7 只完成 provider 拆分，不接入真实 API。
+- API key 只允许放在后端环境变量中，不能写入前端、代码或 Git。
 
 ## 后端测试
 
@@ -87,7 +103,7 @@ GET http://localhost:5000/api/export/pdf?storyId=<story_id>&format=a4_preview_pd
 - M4 彩色漫画预览页：已完成。
 - M5 PDF 导出：已完成。
 - M6 优化与测试：已完成。
-- M7 Provider 拆分与真实模型预备层：下一步。
+- M7 Provider 拆分与真实模型预备层：已完成。
 - M8 真实 StoryProvider 接入：规划中。
 - M9 真实 ImageProvider 接入：规划中。
 - M10 真实工作流稳定化：规划中。
